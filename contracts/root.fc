@@ -1,0 +1,52 @@
+const route_revenue = "route_revenue"c;
+const initialize_voting = "initialize_voting"c;
+const vote = "vote"c;
+const add_member = "add_member"c;
+const eliminate_member = "eliminate_member"c;
+const exit_from_dao = "exit_from_dao"c;
+
+global cell dao_dict; ;; key - addr_prefix, value - cell with dao_member_wallet, revenue share, vote strength
+global cell voting;
+global cell transaction;
+
+() calculate_votes_amount () impure {
+
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
+    if op == route_revenue {
+
+        ;; Transaction comes in and revenue distributes accross dao members in the indicated shares
+
+    }
+
+    if op == initialize_transaction {
+
+        ;; Initialize voting
+
+    }
+
+    if op == vote {
+
+        ;; When vote comes in smart-contract it is written in hashmap, then hashmap is checked, whether sufficient amount of votes are made
+
+    }
+
+    if op == add_member {
+
+        ;; no comments
+
+    }
+
+    if op == eliminate_member  {
+
+    }
+
+    if op == exit_from_dao {
+
+        ;; calculates prefix of sender_addr and sees whether this addr exists in dict
+
+    }
+
+}
