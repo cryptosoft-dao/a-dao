@@ -1,52 +1,229 @@
+#include "imports/stdlib.fc";
+
+(slice, int) dict_get?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTGET" "NULLSWAPIFNOT";
+(cell, int) dict_delete?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTDEL";
+
 const route_revenue = "route_revenue"c;
 const initialize_voting = "initialize_voting"c;
+const initialize_transaction = "initialize_transaction"c;
 const vote = "vote"c;
 const add_member = "add_member"c;
 const eliminate_member = "eliminate_member"c;
 const exit_from_dao = "exit_from_dao"c;
 
+global cell config;
 global cell dao_dict; ;; key - addr_prefix, value - cell with dao_member_wallet, revenue share, vote strength
 global cell voting;
 global cell transaction;
+global int total_dao_users;
 
 () calculate_votes_amount () impure {
 
 }
 
+_ parse_config(slice cs) inline {
+    return (
+        cs~load_msg_addr(),
+        cs~load_uint(32),
+        cs~load_uint(32)
+    );
+}
+
+() save_data() impure { ;; save global variables to storage
+    set_data(
+        begin_cell()
+            .store_dict(config)
+            .store_dict(dao_dict)
+            .store_dict(voting)
+            .store_dict(transaction)
+            .store_uint(total_dao_users, 64)
+        .end_cell()
+    );
+}
+
+() load_data() impure { ;; loading global variables from c4 storage
+    var ds = get_data().begin_parse();
+
+    config = ds~load_dict();
+    dao_dict = ds~load_dict();
+    voting = ds~load_dict();
+    transaction = ds~load_dict();
+    total_dao_users = ds~load_uint(64);
+
+    ds.end_parse();
+}
+
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-
-    if op == route_revenue {
-
-        ;; Transaction comes in and revenue distributes accross dao members in the indicated shares
-
+    if (in_msg_body.slice_empty?()) { ;; ignore all empty messages
+        return ();
     }
 
-    if op == initialize_transaction {
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    slice sender_address = cs~load_msg_addr();
+
+    if (flags & 1) {  ;; ignore bounced messages
+        return ();
+    }
+
+    int op = in_msg_body~load_uint(32);
+
+    load_data();
+
+    if (op == route_revenue) {
+        var (admin_address, max_dao_users, min_votes_to_complete) = parse_config(config.begin_parse());
+        throw_unless(104, equal_slices(admin_address, sender_address));
+        
+        int amount = msg_value / total_dao_users;
+
+        (int key, slice val, int flag) = dao_dict.udict_get_min?(64);
+        while (flag) {
+            var msg = begin_cell()
+                .store_uint(0x10, 6)
+                .store_slice(val~load_msg_addr())
+                .store_coins(amount)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .end_cell();
+            send_raw_message(msg, 0);
+
+            (key, val, flag) = dao_dict.udict_get_next?(64, key);
+
+        }
+
+        return ();
+    }
+
+    elseif (op == initialize_transaction) {
 
         ;; Initialize voting
 
     }
 
-    if op == vote {
+    elseif (op == vote) {
+        int dao_member_id = in_msg_body~load_uint(64);
+        (slice val, int success?) = dao_dict.udict_get?(64, dao_member_id);
+        throw_unless(100, success?);
+        throw_unless(100, equal_slices(val~load_msg_addr(), sender_address));
 
-        ;; When vote comes in smart-contract it is written in hashmap, then hashmap is checked, whether sufficient amount of votes are made
+        int vote_id = in_msg_body~load_uint(64);
+        (slice vote_data, int success?) = voting.udict_get?(64,
+                                                            vote_id);
+        throw_unless(101, success?);
 
+        var (vote_op, vote_sender_address, vote_member_address, vote_dao_id, deadline, total_votes) = (vote_data~load_uint(32), vote_data~load_msg_addr(), vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_uint(64), vote_data~load_uint(64));
+        (int max_dao_id, _, _) = dao_dict.udict_get_max?(64);
+
+        var (admin_address, max_dao_users, min_votes_to_complete) = parse_config(config.begin_parse());
+
+        if (now() >= deadline) {
+            if ((vote_op == add_member) & (total_votes >= min_votes_to_complete)) {
+                throw_if(103, total_dao_users >= max_dao_users);
+
+                dao_dict~udict_set(64,
+                                  max_dao_id + 1,
+                                  begin_cell()
+                                      .store_slice(vote_member_address)
+                                      .store_uint(1, 32)
+                                  .end_cell().begin_parse());
+                total_dao_users += 1;
+            }
+            elseif ((vote_op == eliminate_member) & (total_votes >= min_votes_to_complete)) {
+                dao_dict~udict_delete?(64, vote_dao_id);
+                total_dao_users -= 1;
+            }
+            voting~udict_delete?(64,
+                                 vote_id);
+            save_data();
+
+            throw(102);
+        }
+        voting~udict_set(64,
+                         vote_id,
+                         begin_cell()
+                             .store_uint(vote_op, 32)
+                             .store_slice(vote_sender_address)
+                             .store_slice(vote_member_address)
+                             .store_uint(deadline, 64)
+                             .store_uint(total_votes + val~load_uint(32), 64)
+                         .end_cell().begin_parse());
+        save_data();
+
+        return ();
     }
 
-    if op == add_member {
+    elseif (op == add_member) {
+        int dao_member_id = in_msg_body~load_uint(64);
+        (slice val, int success?) = dao_dict.udict_get?(64, dao_member_id);
+        throw_unless(100, success?);
+        throw_unless(100, equal_slices(val~load_msg_addr(), sender_address));
 
-        ;; no comments
+        int vote_id = in_msg_body~load_uint(64);
+        (_, int success?) = voting.udict_get?(64,
+                                              vote_id);
+        throw_unless(101, success?);
 
+        slice member_to_add_address = in_msg_body~load_msg_addr();
+        int deadline = in_msg_body~load_uint(64);
+
+        voting~udict_set(64,
+                         vote_id,
+                         begin_cell()
+                             .store_uint(op, 32)
+                             .store_slice(sender_address)
+                             .store_slice(member_to_add_address)
+                             .store_uint(0, 64)
+                             .store_uint(deadline, 64)
+                             .store_uint(0, 64)
+                         .end_cell().begin_parse());
+        save_data();
+        return ();
     }
 
-    if op == eliminate_member  {
+    elseif (op == eliminate_member)  {
+        int dao_member_id = in_msg_body~load_uint(64);
+        (slice val, int success?) = dao_dict.udict_get?(64, dao_member_id);
+        throw_unless(100, success?);
+        throw_unless(100, equal_slices(val~load_msg_addr(), sender_address));
 
+        int vote_id = in_msg_body~load_uint(64);
+        (_, int success?) = voting.udict_get?(64,
+                                              vote_id);
+        throw_unless(101, success?);
+
+        slice member_to_eliminate_address = in_msg_body~load_msg_addr();
+        int member_to_eliminate_id = in_msg_body~load_uint(64);
+
+        (slice member_val, int success?) = dao_dict.udict_get?(64, member_to_eliminate_id);
+        throw_unless(100, success?);
+        throw_unless(100, equal_slices(member_val~load_msg_addr(), member_to_eliminate_address));
+
+        int deadline = in_msg_body~load_uint(64);
+
+        voting~udict_set(64,
+                         vote_id,
+                         begin_cell()
+                             .store_uint(op, 32)
+                             .store_uint(vote_id, 64)
+                             .store_slice(sender_address)
+                             .store_slice(member_to_eliminate_address)
+                             .store_uint(member_to_eliminate_id, 64)
+                             .store_uint(deadline, 64)
+                             .store_uint(0, 64)
+                         .end_cell().begin_parse());
+        save_data();
+        return ();
     }
 
-    if op == exit_from_dao {
-
-        ;; calculates prefix of sender_addr and sees whether this addr exists in dict
-
+    elseif (op == exit_from_dao) {
+        int dao_member_id = in_msg_body~load_uint(64);
+        (slice val, int success?) = dao_dict.udict_get?(64, dao_member_id);
+        throw_unless(100, success?);
+        throw_unless(100, equal_slices(val~load_msg_addr(), sender_address));
+        dao_dict~udict_delete?(64, dao_member_id);
+        total_dao_users -= 1;
+        save_data();
+        return ();
     }
 
+    throw(0xffff);
 }
