@@ -151,11 +151,11 @@ _ parse_config(slice cs) inline {
         int total_votes = 1;
 
         if (vote_op == initialize_transaction) {
-            var (vote_dao_id, deadline, transaction_cell, total_votes) = (vote_data~load_uint(64), vote_data~load_uint(64), vote_data~load_ref(), vote_data~load_uint(64));
+            var (deadline, transaction_cell, total_votes) = (vote_data~load_uint(64), vote_data~load_ref(), vote_data~load_uint(64));
         } elseif (vote_op == route_revenue) {
-            var (vote_member_address, vote_dao_id, deadline, total_ton_to_send, total_votes) = (vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_uint(64), vote_data~load_coins(), vote_data~load_uint(64));
+            var (vote_member_address, deadline, total_ton_to_send, total_votes) = (vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_coins(), vote_data~load_uint(64));
         } else {
-            var (vote_member_address, vote_dao_id, deadline, total_votes) = (vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_uint(64), vote_data~load_uint(64));
+            var (vote_member_address, deadline, total_votes) = (vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_uint(64));
         }
         (int max_dao_id, _, _) = dao_dict.udict_get_max?(64);
 
@@ -172,6 +172,7 @@ _ parse_config(slice cs) inline {
                                   begin_cell()
                                       .store_slice(vote_member_address)
                                       .store_uint(1, 32)
+                                      .store_uint(1, 32)
                                   .end_cell().begin_parse());
                 total_dao_users += 1;
             }
@@ -185,10 +186,14 @@ _ parse_config(slice cs) inline {
             }
 
             elseif ((vote_op == route_revenue) & (total_ton_to_send >= min_votes_to_complete)) {
-                int amount = msg_value / total_ton_to_send;
-
-                (int key, slice val, int flag) = dao_dict.udict_get_min?(64);
+                (int key, slice value, int flag) = dao_dict.udict_get_min?(64);
                 while (flag) {
+                    slice user_address = value~load_msg_addr();
+                    value~load_uint(32);
+                    int user_share = value~load_uint(32);
+
+                    int amount = (msg_value * user_share) / 100;
+
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
                         .store_slice(val~load_msg_addr())
@@ -209,15 +214,39 @@ _ parse_config(slice cs) inline {
 
             throw(102);
         }
-        voting~udict_set(64,
-                         vote_id,
-                         begin_cell()
-                             .store_uint(vote_op, 32)
-                             .store_slice(vote_sender_address)
-                             .store_slice(vote_member_address)
-                             .store_uint(deadline, 64)
-                             .store_uint(total_votes + val~load_uint(32), 64)
-                         .end_cell().begin_parse());
+        if (vote_op == initialize_transaction) {
+            voting~udict_set(64,
+                            vote_id,
+                            begin_cell()
+                                .store_uint(vote_op, 32)
+                                .store_slice(vote_sender_address)
+                                .store_uint(deadline, 64)
+                                .store_ref(transaction_cell)
+                                .store_uint(total_votes + val~load_uint(32), 64)
+                            .end_cell().begin_parse());
+        } elseif (vote_op == route_revenue) {
+            voting~udict_set(64,
+                            vote_id,
+                            begin_cell()
+                                .store_uint(vote_op, 32)
+                                .store_slice(vote_sender_address)
+                                .store_slice(vote_member_address)
+                                .store_uint(deadline, 64)
+                                .store_ref(total_ton_to_send)
+                                .store_uint(total_votes + val~load_uint(32), 64)
+                            .end_cell().begin_parse());
+        } else {
+            voting~udict_set(64,
+                            vote_id,
+                            begin_cell()
+                                .store_uint(vote_op, 32)
+                                .store_slice(vote_sender_address)
+                                .store_slice(vote_member_address)
+                                .store_uint(deadline, 64)
+                                .store_uint(total_votes + val~load_uint(32), 64)
+                            .end_cell().begin_parse());  
+        }
+
         save_data();
 
         return ();
