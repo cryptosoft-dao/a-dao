@@ -1,0 +1,7 @@
+const route_revenue = "route_revenue"c;
+const initialize_voting = "initialize_voting"c;
+const initialize_transaction = "initialize_transaction"c;
+const vote = "vote"c;
+const add_member = "add_member"c;
+const eliminate_member = "eliminate_member"c;
+const exit_from_dao = "exit_from_dao"c;

@@ -1,0 +1,29 @@
+global int total_dao_users;
+global int total_dao_strength;
+global cell config;
+global cell dao_dict; ;; key - addr_prefix, value - cell with dao_member_address, vote strength, revenue share, can_propose?
+global cell votings;
+
+() save_data() impure inline { 
+    set_data(
+        begin_cell()
+            .store_uint(total_dao_users, 64)
+            .store_uint(total_dao_strength, 32)
+            .store_ref(config)
+            .store_dict(dao_dict)
+            .store_dict(votings)
+        .end_cell()
+    );
+}
+
+() load_data() impure inline { 
+    slice ds = get_data().begin_parse();
+
+    total_dao_users = ds~load_uint(64);
+    total_dao_strength = ds~load_uint(32);
+    config = ds~load_ref();
+    dao_dict = ds~load_dict();
+    votings = ds~load_dict();
+
+    ds.end_parse();
+}
