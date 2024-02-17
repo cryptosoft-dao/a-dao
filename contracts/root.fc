@@ -1,12 +1,19 @@
 #include "imports/stdlib.fc";
 
+;; Operation codes
+
+const int op::vote = 0;
+const int op::initiate_voting = 1;
+const int op::change_config = 2;
+const int op::exit_from_dao = 3;
+
 ;; Voting types
 
-const int add_member = 0;
-const int terminate_membership = 1;
-const int route_revenue = 2;
-const int arbitrary_transaction = 3;
-const int change_config = 4;
+const int vt::add_member = 0;
+const int vt::terminate_membership = 1;
+const int vt::route_revenue = 2;
+const int vt::arbitrary_transaction = 3;
+const int vt::change_config = 4;
 
 ;; Global variables
 
@@ -14,18 +21,17 @@ global cell config; ;; int max_dao_members, int percent_of_votes_for_agreement
 global cell members_dict; ;; key: int index // value (cell): slice member_addr,  int voice_strength, int revenue_position
 global int total_voices;
 global int total_revenue_points;
-global cell votings_dict; ;; key: int index // value (cell): int voting_type, int deadline, cell voting_info, cell votes, int total_votes
-global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, cell votes, int total_votes
+global cell votings; ;; key: int index // value (cell): int voting_type, int deadline, cell voting_info, cell votes, int total_votes
+global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, cell votes, int total_votes
 
 () save_data() impure inline { 
     set_data(
         begin_cell()
-            .store_uint(config, 32)
+            .store_ref(config)
             .store_ref(members_dict)
             .store_uint(total_voices, 32)
             .store_uint(total_revenue_points, 32)
-            .store_dict(votings_dict)
-            .store_dict(last_added_voting)
+            .store_dict(votings)
         .end_cell()
     );
 }
@@ -37,8 +43,7 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
     members_dict = ds~load_dict();
     total_voices = ds~load_uint(32);
     total_revenue_points = ds~load_uint(32);
-    votings_dict = ds~load_dict();
-    last_added_voting = ds~load_ref();
+    votings = ds~load_dict();
     ds.end_parse();
 }
 
@@ -54,7 +59,7 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
     }
 }
 
-() add_cached_voting(cell votings) inline {
+() add_cached_voting(cell votings, cell voting_cell) inline {
     (int key, slice value, int success?) = udict_get_max?(votings, 64);
 
     if (key = 255) {
@@ -62,7 +67,18 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
     }
 
     if (success?) {
-        votings~udict_add(64, key + 1, cached_voting);
+        votings~udict_add?(64, key + 1, cached_voting);
+    }
+}
+
+(int) check_membership(slice sender_address, int member_index) inline {
+
+    (slice member_info, int success?) = members_dict.udict_get?(8, member_index);
+
+    if (equal_slices(sender_address, member_info~load_msg_addr())) {
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -83,14 +99,14 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
 
     load_data();
 
-    if (op == vote) {
+    if (op == op::vote) {
 
         int member_index = in_msg_body~load_uint(8);
         int voting_index = in_msg_body~load_uint(8);
 
         ;; get voting by voting_index
 
-        (slice voting, int found?) = votings~dict_get?(8, voting_index);
+        (slice voting, int found?) = votings.udict_get?(8, voting_index);
         throw_unless(200, found?);
         ;; Parse voting
 
@@ -123,7 +139,7 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
         int max_dao_members = config_cs~load_uint(8); ;; skip 
         int percent_of_votes_for_agreement = config_cs~load_uint(8);
 
-        int votes_for_approval = percent_of_votes_for_agreement / dao_strength * 100;
+        int votes_for_approval = percent_of_votes_for_agreement / total_voices * 100;
 
         ;; Do actions in case of approval, otherwise save vote
 
@@ -133,7 +149,7 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
 
             ;; Do actions
 
-            if (voting_type == add_member) {
+            if (voting_type == vt::add_member) {
 
                 (int last_member_index, _, _) = votings.udict_get_max?(8);
                 int new_member_index = last_member_index + 1;
@@ -150,30 +166,23 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
 
                 ;; Increase DAO strength
 
-                dao_strength += voice_strength;
+                total_voices += voice_strength;
             }
 
-            if (voting_type == terminate_membership) {
+            if (voting_type == vt::terminate_membership) {
 
-                int last_member_index = votings~udict_get_max?();
-                int new_member_index = last_member_index + 1;
-
-                voting_info_cs~load_msg_addr(); ;; slice member_to_add_addr
-                int voice_strength = voting_info_cs~load_uint(32);
-                voting_info_cs~load_uint(32); ;; int revenue_position
+                int member_to_delete_index = voting_info_cs~load_uint(8);
 
                 ;; Delete member from dict
 
-                if (new_member_index < max_dao_members) { 
-                    members_dict~udict_delete?(8, new_member_index, voting_info_cs);
-                }
+                members_dict.udict_delete?(8, member_to_delete_index);
 
                 ;; Decrease DAO strength
 
-                dao_strength -= voice_strength;
+                total_voices -= voice_strength;
             }
 
-            if (voting_type == route_revenue) {
+            if (voting_type == vt::route_revenue) {
 
                 int revenue_to_route = voting_info_cs~load_uint(32); ;; int amount
 
@@ -187,42 +196,39 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
                     int voice_strength = member_info~load_uint(32);
                     int revenue_position = member_info~load_uint(32);
 
-                    int member_revenue = revenue_to_route / dao_strength * voice_strength;
+                    int member_revenue = revenue_to_route / total_voices * voice_strength;
                 
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
                         .store_slice(member_addr)
                         .store_coins(member_revenue)
-                        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                        .store_uint(0, 107)
                         .end_cell();
                     send_raw_message(msg, 0);
                 }
             }
 
-            if (voting_type == arbitrary_transaction) {
+            if (voting_type == vt::arbitrary_transaction) {
 
-                slice destination = voting_info~load_msg_addr(); ;; destination
-                int amount = voting_info~load_uint(32); ;; amount
-                int msg_body = voting_info~load_ref(); ;; msg_body
+                slice destination = voting_info_cs~load_msg_addr(); ;; destination
+                int amount = voting_info_cs~load_uint(32); ;; amount
+                cell msg_body = voting_info_cs~load_ref(); ;; msg_body
 
                 ;; Arbitrary transaction
 
                 var msg = begin_cell()
-                    .store_uint(0x10, 6)
-                    .store_slice(destination)
-                    .store_coins(amount)
-                    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                        .store_uint(0x18, 6)
+                        .store_slice(destination)
+                        .store_coins(amount)
+                        .store_uint(1, 107)
+                        .store_ref(msg_body)
                     .end_cell();
                 send_raw_message(msg, 0);
             }
 
-            if (voting_type == change_config) {
+            if (voting_type == vt::change_config) {
 
-                cell new_config = voting_info~load_ref(); ;; new config
-
-                ;; Change config
-
-                change_config = new_config;
+                config = voting_info_cs~load_ref(); ;; parse and save new config
             }
 
         } else {
@@ -233,7 +239,7 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
 
     ;; Initiate voting msg: int member_index, int voting_index, cell voting_cell
 
-    if (op == initiate_voting) {
+    if (op == op::initiate_voting) {
 
         int member_index = in_msg_body~load_uint(8);
 
@@ -242,76 +248,80 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
         int voting_index = in_msg_body~load_uint(8);
         cell voting_cell = in_msg_body~load_ref();
 
+        slice voting_cell_cs = voting_cell.begin_parse();
+
         ;; Check voting info
 
-        voting_cell.preload_uint(4); ;; voting_type
-        voting_cell.preload_uint(32); ;; deadline
-        voting_cell.preload_ref(); ;; voting_info
-        voting_cell.preload_ref(); ;; votes
-        voting_cell.preload_uint(32); ;; total_votes
+        int voting_type = voting_cell_cs.preload_uint(4);
+        int deadline = voting_cell_cs.preload_uint(32);
+        cell voting_info = voting_cell_cs.preload_ref();
+        cell votes = voting_cell_cs.preload_ref();
+        int total_votes = voting_cell_cs.preload_uint(32);
+
+        slice voting_info_cs = voting_info.begin_parse();
 
         ;; Index 0: Add member
         ;; voting_info: slice member_to_add_addr
 
-        if (voting_type == add_member) {
+        if (voting_type == vt::add_member) {
 
             ;; Check voting_info for initiating adding member
 
-            voting_info~load_msg_addr(); ;; slice member_to_add_addr
-            voting_info~load_uint(32); ;; int voice_strength
-            voting_info~load_uint(32); ;; int revenue_position
+            voting_info_cs~load_msg_addr(); ;; slice member_to_add_addr
+            voting_info_cs~load_uint(32); ;; int voice_strength
+            voting_info_cs~load_uint(32); ;; int revenue_position
 
-            add_cached_voting(votings_dict, voting_cell);
+            add_cached_voting(votings, voting_cell);
         }
 
         ;; Index 1: Eliminate member
         ;; voting_info: slice member_to_eliminate_addr
 
-        if (voting_type == terminate_membership) {
+        if (voting_type == vt::terminate_membership) {
 
             ;; Check voting_info for initiating termination of membership
 
-            voting_info~load_msg_addr(); ;; slice member_to_eliminate_addr
+            voting_info_cs~load_msg_addr(); ;; slice member_to_eliminate_addr
 
-            add_cached_voting(votings_dict, voting_cell);
+            add_cached_voting(votings, voting_cell);
         }
 
         ;; Index 2: Revenue routing voting
         ;; voting_info: int amount
 
-        if (voting_type == route_revenue) {
+        if (voting_type == vt::route_revenue) {
 
             ;; Check voting_info for initiating revenue routing
 
-            voting_info~load_uint(32); ;; int amount
+            voting_info_cs~load_uint(32); ;; int amount
 
-            add_cached_voting(votings_dict, voting_cell);
+            add_cached_voting(votings, voting_cell);
         }
 
         ;; Index 3: Arbitrary transaction
         ;; voting_info: slice destination, int amount, cell msg_body
 
-        if (voting_type == arbitrary_transaction) {
+        if (voting_type == vt::arbitrary_transaction) {
 
             ;; Check voting_info for initiating arbitrary transaction
 
-            voting_info~load_msg_addr(); ;; destination
-            voting_info~load_uint(32); ;; amount
-            voting_info~load_ref(); ;; msg_body
+            voting_info_cs~load_msg_addr(); ;; destination
+            voting_info_cs~load_uint(32); ;; amount
+            voting_info_cs~load_ref(); ;; msg_body
 
-            add_cached_voting(votings_dict, voting_cell);
+            add_cached_voting(votings, voting_cell);
 
         }
 
         ;; Index 4: Initiate change config
         ;; voting_info: 
 
-        if (op == change_config) {
+        if (voting_type == vt::change_config) {
 
             ;; Check voting_info for changing config
 
-            voting_info~load_uint(8); ;; max_dao_members
-            voting_info~load_uint(8); ;; percent_of_votes_for_agreement
+            voting_info_cs~load_uint(8); ;; max_dao_members
+            voting_info_cs~load_uint(8); ;; percent_of_votes_for_agreement
 
             add_cached_voting(votings, voting_cell);
 
@@ -319,14 +329,16 @@ global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, c
         return ();
     }
 
-    if (op == exit_from_dao) {
+    if (op == op::exit_from_dao) {
 
         int member_index = in_msg_body~load_uint(8);
 
         check_membership(sender_address, member_index);
 
-        add_cached_voting(votings, voting_cell);
+        members_dict.udict_delete?(8, member_index);
+
         return ();
+
     }
     throw(0xffff);
 }
