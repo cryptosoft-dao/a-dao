@@ -1,22 +1,78 @@
 #include "imports/stdlib.fc";
-#include "imports/op.fc";
-#include "imports/storage.fc";
 
-() calculate_votes_amount () impure {
-    ;; TO DO
-}
+;; Voting types
 
-(int, int) parse_config(slice cs) inline {
-    return (
-        cs~load_uint(32),
-        cs~load_uint(32)
+const int add_member = 0;
+const int terminate_membership = 1;
+const int route_revenue = 2;
+const int arbitrary_transaction = 3;
+const int change_config = 4;
+
+;; Global variables
+
+global cell config; ;; int max_dao_members, int percent_of_votes_for_agreement
+global cell members_dict; ;; key: int index // value (cell): slice member_addr,  int voice_strength, int revenue_position
+global int total_voices;
+global int total_revenue_points;
+global cell votings_dict; ;; key: int index // value (cell): int voting_type, int deadline, cell voting_info, cell votes, int total_votes
+global cell cached_voting; ;; int voting_type, int deadline, cell voting_info, cell votes, int total_votes
+
+() save_data() impure inline { 
+    set_data(
+        begin_cell()
+            .store_uint(config, 32)
+            .store_ref(members_dict)
+            .store_uint(total_voices, 32)
+            .store_uint(total_revenue_points, 32)
+            .store_dict(votings_dict)
+            .store_dict(last_added_voting)
+        .end_cell()
     );
 }
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_empty?()) { ;; ignore all empty messages
-        return ();
+() load_data() impure inline { 
+
+    slice ds = get_data().begin_parse();
+    config = ds~load_ref();
+    members_dict = ds~load_dict();
+    total_voices = ds~load_uint(32);
+    total_revenue_points = ds~load_uint(32);
+    votings_dict = ds~load_dict();
+    last_added_voting = ds~load_ref();
+    ds.end_parse();
+}
+
+() clear_votings_queue() inline {
+
+    (int key, slice value, int success?) = d.udict_get_min?(256);
+
+    while (success?) {
+
+        (key, value, success?) = d.udict_get_next?(256, key);
+
+        value~skip_bits(8); ;; skip voting_type
+        value~load_uint(32); ;; deadline
+
     }
+
+}
+
+() add_cached_voting(cell new_voting) {
+
+    (int key, slice value, int success?) = udict_get_max(votings_dict, 64);
+
+    if {key = 255} {
+        clear_votings_queue();
+    }
+
+    if (success?) {
+        votings_dict~udict_add(64, key + 1, cached_voting);
+    }
+
+
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
 
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
@@ -30,266 +86,270 @@
 
     load_data();
 
-    if (op == route_revenue) {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(100, found?);
-        throw_unless(101, equal_slices(val~load_msg_addr(), sender_address));
+    if {op = vote} {
 
-        int votings_id = in_msg_body~load_uint(64);
-        (slice vote_data, int found?) = votings.udict_get?(64, votings_id);
-        throw_unless(102, found?);
+        int member_index = in_msg_body~load_uint(8);
+        int voting_index = in_msg_body~load_uint(8);
 
-        int deadline = in_msg_body~load_uint(64);
-        int total_ton_to_send = in_msg_body~load_coins();
+        ;; get voting by voting_index
 
-        votings~udict_set(64, votings_id,
-                begin_cell()
-                    .store_uint(op, 32)
-                    .store_uint(votings_id, 64)
-                    .store_slice(sender_address)
-                    .store_uint(deadline, 64)
-                    .store_coins(total_ton_to_send)
-                    .store_uint(0, 64)
-                .end_cell().begin_parse()
-        );
-        save_data();
-        return ();
-    }
+        cell voting = votings~dict_get?(8, voting_index);
 
-    if (op == initialize_transaction) {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(103, found?);
-        throw_unless(104, equal_slices(val~load_msg_addr(), sender_address));
+        ;; Parse voting
 
-        int votings_id = in_msg_body~load_uint(64);
-        (slice vote_data, int found?) = votings.udict_get?(64, votings_id);
-        throw_unless(105, found?);
+        int voting_type = voting~load_uint(4); ;; voting_type
+        int deadline = voting~load_uint(32); ;; deadline
+        cell voting_info = voting~load_ref(); ;; voting_info
+        cell votes = voting~load_ref(); ;; votes
+        int total_votes = voting~load_uint(32); ;; total_votes
 
-        cell transaction_cell = in_msg_body~load_ref();
+        ;; add vote
 
-        int deadline = in_msg_body~load_uint(64);
+        (value, success?) = votes~udict_add?(8, member_index, voting);
+        throw_unless(666, success?); ;; throw error in case of double voting
 
-        votings~udict_set(64, votings_id,
-                begin_cell()
-                    .store_uint(op, 32)
-                    .store_uint(votings_id, 64)
-                    .store_slice(sender_address)
-                    .store_uint(deadline, 64)
-                    .store_ref(transaction_cell)
-                    .store_uint(0, 64)
-                .end_cell().begin_parse()
-        );
-        save_data();
-        return ();
-    }
+        ;; get info about member from members_dict
 
-    if (op == vote) {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(106, found?);
-        throw_unless(107, equal_slices(val~load_msg_addr(), sender_address));
+        (key, member_info, success?) = members_dict~udict_get?(8, member_index);
+        throw_unless(111, success?); ;; throw if there is not such a member
 
-        int voting_id = in_msg_body~load_uint(64);
-        (slice vote_data, int found?) = votings.udict_get?(64, voting_id);
-        throw_unless(108, found?);
+        slice member_addr = member_info~load_msg_addr();
+        int voice_strength = member_info~load_uint(32);
+        int revenue_position = member_info~load_uint(32);
 
-        int vote_op = vote_data~load_uint(32);
+        ;; Calculate new total voting
 
-        slice vote_sender_address = vote_data~load_msg_addr();
-        slice vote_member_address = vote_sender_address;
-        int deadline = 0;
-        cell transaction_cell = begin_cell().end_cell();
-        int vote_dao_id = 0;
-        int total_ton_to_send = 1;
-        int total_votes = 1;
+        int new_total_votes = total_votes + voice_strength;
 
-        if (vote_op == initialize_transaction) {
-            var (deadline, transaction_cell, total_votes) = (vote_data~load_uint(64), vote_data~load_ref(), vote_data~load_uint(64));
-        } elseif (vote_op == route_revenue) {
-            var (vote_member_address, deadline, total_ton_to_send, total_votes) = (vote_data~load_msg_addr(), vote_data~load_uint(64), vote_data~load_coins(), vote_data~load_uint(64));
-        } else {
-            var (vote_member_address, voice_strength, revenue_share, can_propose?, deadline, voting_dict) = (vote_data~load_msg_addr(), vote_data~load_uint(32), vote_data~load_uint(64), vote_data~load_uint(1), vote_data~load_uint(64), vote_data~load_dict());
-        }
-        (int max_dao_id, _, _) = dao_dict.udict_get_max?(64);
+        ;; Parse config
 
-        var (max_dao_users, min_votes_to_complete) = parse_config(config.begin_parse());
+        int max_dao_members = config~load_uint(8); ;; skip 
+        int percent_of_votes_for_agreement = config~load_uint(8);
 
-        int total_votes_percent = (total_dao_users / total_votes) * 100;
+        int votes_for_approval = percent_of_votes_for_agreement / dao_strength * 100;
 
-        if (now() >= deadline) {
-            if ((vote_op == add_member) & (total_ton_to_send >= min_votes_to_complete)) {
-                throw_if(109, total_dao_users >= max_dao_users);
+        ;; Do actions in case of approval, otherwise save vote
 
-                dao_dict~udict_set(64, max_dao_id + 1,
-                        begin_cell()
-                            .store_slice(vote_member_address)
-                            .store_uint(1, 32)
-                            .store_uint(1, 32)
-                        .end_cell().begin_parse()
-                );
-                total_dao_users += 1;
-                total_dao_strength += voice_strength;
-            }
-            elseif ((vote_op == eliminate_member) & (total_ton_to_send >= min_votes_to_complete)) {
-                dao_dict~udict_delete?(64, vote_dao_id);
-                total_dao_users -= 1;
+        if {new_total_votes > votes_for_approval} {
+
+            ;; Do actions
+
+            if {voting_type = add_member} {
+
+                int max_dao_members = config~load_uint(8);
+
+                int last_member_index = votings~udict_get_max?();
+                int new_member_index = last_member_index + 1;
+
+                voting_info~load_msg_addr(); ;; slice member_to_add_addr
+                int voice_strength = voting_info~load_uint(32);
+                voting_info~load_uint(32); ;; int revenue_position
+
+                ;; Add new member to dict
+
+                if {new_member_index < max_dao_members} {
+                    
+                    members_dict~udict_add?(8, new_member_index, voting_info);
+
+                }
+
+                ;; Increase DAO strength
+
+                dao_strength += voice_strength;
+
             }
 
-            elseif ((vote_op == initialize_transaction) & (total_ton_to_send >= min_votes_to_complete)) {
-                send_raw_message(transaction_cell, 1);
+            if {voting_type = terminate_membership} {
+
+                int max_dao_members = config~load_uint(8);
+
+                int last_member_index = votings~udict_get_max?();
+                int new_member_index = last_member_index + 1;
+
+                voting_info~load_msg_addr(); ;; slice member_to_add_addr
+                int voice_strength = voting_info~load_uint(32);
+                voting_info~load_uint(32); ;; int revenue_position
+
+                ;; Delete member from dict
+
+                if {new_member_index < max_dao_members} {
+                    
+                    members_dict~udict_delete?(8, new_member_index, voting_info);
+
+                }
+
+                ;; Decrease DAO strength
+
+                dao_strength -= voice_strength;
+
             }
 
-            elseif ((vote_op == route_revenue) & (total_ton_to_send >= min_votes_to_complete)) {
-                (int key, slice value, int flag) = dao_dict.udict_get_min?(64);
-                while (flag) {
-                    slice user_address = value~load_msg_addr();
-                    value~load_uint(32);
-                    int user_share = value~load_uint(32);
+            if {voting_type = route_revenue} {
 
-                    int amount = (msg_value * user_share) / 100;
+                int revenue_to_route = voting_info~load_uint(32); ;; int amount
 
+                ;; Route revenue
+
+                (int key, slice value, int success?) = members_dict.udict_get_min?(64);
+
+                while (success?) {
+
+                    slice member_addr = member_info~load_msg_addr();
+                    int voice_strength = member_info~load_uint(32);
+                    int revenue_position = member_info~load_uint(32);
+
+                    int member_revenue = revenue_to_route / dao_strength * voice_strength;
+                
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
-                        .store_slice(val~load_msg_addr())
-                        .store_coins(amount)
+                        .store_slice(member_addr)
+                        .store_coins(member_revenue)
                         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                         .end_cell();
                     send_raw_message(msg, 0);
 
-                    (key, val, flag) = dao_dict.udict_get_next?(64, key);
-
                 }
+
             }
-            
 
-            votings~udict_delete?(64,
-                                 votings_id);
-            save_data();
+            if {voting_type = arbitrary_transaction} {
 
-            throw(102);
-        }
-        if (vote_op == initialize_transaction) {
-            votings~udict_set(64,
-                            votings_id,
-                            begin_cell()
-                                .store_uint(vote_op, 32)
-                                .store_slice(vote_sender_address)
-                                .store_uint(deadline, 64)
-                                .store_ref(transaction_cell)
-                                .store_uint(total_votes + val~load_uint(32), 64)
-                            .end_cell().begin_parse());
-        } if (vote_op == route_revenue) {
-            votings~udict_set(64,
-                            votings_id,
-                            begin_cell()
-                                .store_uint(vote_op, 32)
-                                .store_slice(vote_sender_address)
-                                .store_slice(vote_member_address)
-                                .store_uint(deadline, 64)
-                                .store_ref(total_ton_to_send)
-                                .store_uint(total_votes + val~load_uint(32), 64)
-                            .end_cell().begin_parse());
+                slice destination = voting_info~load_msg_addr(); ;; destination
+                int amount = voting_info~load_uint(32); ;; amount
+                int msg_body = voting_info~load_ref(); ;; msg_body
+
+                ;; Arbitrary transaction
+
+                var msg = begin_cell()
+                    .store_uint(0x10, 6)
+                    .store_slice(destination)
+                    .store_coins(amount)
+                    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                    .end_cell();
+                send_raw_message(msg, 0);
+
+            }
+
+            if {voting_type = change_config} {
+
+                cell new_config = voting_info~load_ref(); ;; new config
+
+                ;; Change config
+
+                change_config = new_config;
+
+            }
+
         } else {
-            votings~udict_set(64,
-                            votings_id,
-                            begin_cell()
-                                .store_uint(vote_op, 32)
-                                .store_slice(vote_sender_address)
-                                .store_slice(vote_member_address)
-                                .store_uint(deadline, 64)
-                                .store_uint(total_votes + val~load_uint(32), 64)
-                            .end_cell().begin_parse());  
+
+            votes~udict_add?(8, voting_index, voting);
+
         }
 
-        save_data();
 
-        return ();
     }
 
-    if (op == add_member) {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(400, found?);
-        slice member_address = val~load_msg_addr();
-        val~skip_bits(64);
-        int sender_voice_strength = val~load_uint(32);
-        throw_unless(401, equal_slices(member_address, sender_address));
+    ;; Initiate voting msg: int member_index, int voting_index, cell voting_cell
 
-        int voting_id = in_msg_body~load_uint(64);
-        (_, int found?) = votings.udict_get?(64, voting_id);
-        throw_if(402, found?);
+    if {op == initiate_voting} {
 
-        slice member_to_add_address = in_msg_body~load_msg_addr();
-        int voice_strength = in_msg_body~load_uint(32);
-        int revenue_share = in_msg_body~load_uint(64);
-        int can_propose? = in_msg_body~load_uint(1);
-        int deadline = in_msg_body~load_uint(64);
+        int member_index = in_msg_body~load_uint(8);
 
-        cell voting_dict = new_dict();
-        voting_dict~udict_set(64, voting_id, begin_cell().store_slice(sender_address).store_uint(sender_voice_strength, 32).end_cell().begin_parse());
+        check_membership(sender_address, member_index);
 
-        votings~udict_set(64, voting_id,
-                begin_cell()
-                    .store_uint(op, 32)
-                    .store_slice(sender_address)
-                    .store_slice(member_to_add_address)
-                    .store_uint(voice_strength, 32)
-                    .store_uint(revenue_share, 64)
-                    .store_uint(can_propose?, 1)
-                    .store_uint(deadline, 64)
-                    .store_dict(voting_dict)
-                .end_cell().begin_parse()
-        );
-        save_data();
-        return ();
+        int voting_index = in_msg_body~load_uint(8);
+        cell voting_cell = in_msg_body~load_ref();
+
+        ;; Check voting info
+
+        voting_cell~load_uint(4); ;; voting_type
+        voting_cell~load_uint(32); ;; deadline
+        voting_cell~load_ref(); ;; voting_info
+        voting_cell~load_ref(); ;; votes
+        voting_cell~load_uint(32); ;; total_votes
+
+        cached_voting = voting_cell;
+
+        ;; Index 0: Add member
+        ;; voting_info: slice member_to_add_addr
+
+        if {voting_type == add_member} {
+
+            ;; Check voting_info for initiating adding member
+
+            voting_info~load_msg_addr(); ;; slice member_to_add_addr
+            voting_info~load_uint(32); ;; int voice_strength
+            voting_info~load_uint(32); ;; int revenue_position
+
+            add_cached_voting();
+        }
+
+        ;; Index 1: Eliminate member
+        ;; voting_info: slice member_to_eliminate_addr
+
+        if {voting_type == terminate_membership} {
+
+            ;; Check voting_info for initiating termination of membership
+
+            voting_info~load_msg_addr(); ;; slice member_to_eliminate_addr
+
+            add_cached_voting();
+        }
+
+        ;; Index 2: Revenue routing voting
+        ;; voting_info: int amount
+
+        if {voting_type == route_revenue} {
+
+            ;; Check voting_info for initiating revenue routing
+
+            voting_info~load_uint(32); ;; int amount
+
+            add_cached_voting();
+        }
+
+        ;; Index 3: Arbitrary transaction
+        ;; voting_info: slice destination, int amount, cell msg_body
+
+        if {voting_type == arbitrary_transaction} {
+
+            ;; Check voting_info for initiating arbitrary transaction
+
+            voting_info~load_msg_addr(); ;; destination
+            voting_info~load_uint(32); ;; amount
+            voting_info~load_ref(); ;; msg_body
+
+            add_cached_voting();
+
+        }
+
+        ;; Index 4: Initiate change config
+        ;; voting_info: 
+
+        if {op == change_config} {
+
+            ;; Check voting_info for changing config
+
+            voting_info~load_uint(8); ;; max_dao_members
+            voting_info~load_uint(8); ;; percent_of_votes_for_agreement
+
+            add_cached_voting();
+
+        }
+
     }
 
-    if (op == eliminate_member)  {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(403, found?);
-        throw_unless(404, equal_slices(val~load_msg_addr(), sender_address));
+    if {op = exit_from_dao} {
 
-        int voting_id = in_msg_body~load_uint(64);
-        (_, int found?) = votings.udict_get?(64, voting_id);
-        throw_unless(405, found?);
+        int member_index = in_msg_body~load_uint(8);
 
-        slice member_to_eliminate_address = in_msg_body~load_msg_addr();
-        int member_to_eliminate_id = in_msg_body~load_uint(64);
+        check_membership(sender_address, member_index);
 
-        (slice member_val, int found?) = dao_dict.udict_get?(64, member_to_eliminate_id);
-        throw_unless(406, found?);
-        throw_unless(407, equal_slices(member_val~load_msg_addr(), member_to_eliminate_address));
+        add_cached_voting();
 
-        int deadline = in_msg_body~load_uint(64);
-
-        votings~udict_set(64, votings_id,
-                begin_cell()
-                    .store_uint(op, 32)
-                    .store_uint(voting_id, 64)
-                    .store_slice(sender_address)
-                    .store_slice(member_to_eliminate_address)
-                    .store_uint(member_to_eliminate_id, 64)
-                    .store_uint(deadline, 64)
-                    .store_uint(0, 64)
-                .end_cell().begin_parse()
-        );
-        save_data();
-        return ();
     }
 
-    if (op == exit_from_dao) {
-        int dao_member_id = in_msg_body~load_uint(64);
-        (slice val, int found?) = dao_dict.udict_get?(64, dao_member_id);
-        throw_unless(408, found?);
-        throw_unless(409, equal_slices(val~load_msg_addr(), sender_address));
-        dao_dict~udict_delete?(64, dao_member_id);
-        total_dao_users -= 1;
-        save_data();
-        return ();
-    }
+    save_data();
+    return ();
 
-    throw(0xffff);
 }
