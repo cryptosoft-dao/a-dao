@@ -2,43 +2,39 @@
 
 ;; Operation codes
 
-const int op::vote = 0;
-const int op::initiate_voting = 1;
-const int op::change_config = 2;
-const int op::exit_from_Root = 3;
+const int op::activate_root = 0;
+const int op::propose_transaction = 1;
+const int op::approve_transaction = 2;
+const int op::quit_root = 3;
 
-;; Voting types
+;; Transaction types
 
-const int vt::add_member = 0;
-const int vt::terminate_membership = 1;
-const int vt::route_revenue = 2;
-const int vt::arbitrary_transaction = 3;
-const int vt::change_config = 4;
+const int tt::invite_wallet = 0;
+const int tt::exclude_wallet = 1;
+const int tt::distribute_ton = 2;
+const int tt::arbitrary_transaction = 3;
+const int tt::change_settings = 4;
 
 ;; Global variables
 
-global int max_members;
-global int agreement_percent;
-global cell members; ;; key: int index // value (cell): slice member_addr,  int voice_strength, int revenue_position
-global int total_voices;
-global int total_revenue_points;
-global cell votings; ;; key: int index // value (cell): int voting_type, int deadline, cell voting_info, cell votes, int total_votes
-global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, cell votes, int total_votes
+global slice root_minter_addr;
+global int max_authorized_wallets;
+global int transaction_approval_percent;
+global cell authorized_wallets; ;; key: int wallet_sha256_hash // value (cell): slice wallet_addr,  int approval_points, int distribution_points
+global int total_approval_points;
+global int total_distribution_points;
+global cell pending_transactions; ;; key: int wallet_sha256_hash // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
 
 () save_data() impure inline {
 
-    active? = 0;
-    total_voices = 0;
-
     set_data(
         begin_cell()
-            .store_uint(active?)
-            .store_uint(max_members, 8)
+            .store_uint(max_authorized_wallets, 8)
             .store_uint(agreement_percent, 8)
-            .store_dict(members)
-            .store_uint(total_voices, 32)
-            .store_uint(total_revenue_points, 32)
-            .store_dict(votings)
+            .store_dict(authorized_wallets)
+            .store_uint(total_approval_points, 32)
+            .store_uint(total_distribution_points, 32)
+            .store_dict(pending_transactions)
         .end_cell()
     );
 }
@@ -47,44 +43,44 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
     slice ds = get_data().begin_parse();
 
-    config = ds~load_ref();
-    members = ds~load_dict();
-    total_voices = ds~load_uint(32);
-    total_revenue_points = ds~load_uint(32);
-    votings = ds~load_dict();
+    settings = ds~load_ref();
+    authorized_wallets = ds~load_dict();
+    total_credits = ds~load_uint(32);
+    total_points = ds~load_uint(32);
+    pending_transactions = ds~load_dict();
     ds.end_parse();
 }
 
-() clear_votings_queue() inline {
+() clear_pending_transactions_queue() inline {
 
-    (int key, slice value, int success?) = votings.udict_get_min?(256);
+    (int key, slice value, int success?) = pending_transactions.udict_get_min?(256);
 
     while (success?) {
-        (key, value, success?) = votings.udict_get_next?(256, key);
+        (key, value, success?) = pending_transactions.udict_get_next?(256, key);
 
-        value~skip_bits(8); ;; skip voting_type
+        value~skip_bits(8); ;; skip transaction_type
         value~load_uint(32); ;; deadline
     }
 }
 
-() add_cached_voting() inline {
+() add_cached_transaction() inline {
 
-    (int key, slice value, int success?) = udict_get_max?(votings, 64);
+    (int key, slice value, int success?) = udict_get_max?(pending_transactions, 64);
 
     if (key = 255) {
-        clear_votings_queue(votings);
+        clear_pending_transactions_queue(pending_transactions);
     }
 
     if (success?) {
-        votings~udict_add?(64, key + 1, cached_voting);
+        pending_transactions~udict_add?(64, key + 1, cached_transaction);
     }
 }
 
-(int) check_membership(slice sender_address, int member_index) inline {
+(int) check_authority(slice sender_address, int wallet_index) inline {
 
-    (slice member_info, int success?) = members.udict_get?(8, member_index);
+    (slice wallet_info, int success?) = authorized_wallets.udict_get?(8, wallet_index);
 
-    if (equal_slices(sender_address, member_info~load_msg_addr())) {
+    if (equal_slices(sender_address, wallet_info~load_msg_addr())) {
         return true;
     } else {
         return false;
@@ -95,16 +91,6 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
     
     if (in_msg_body.slice_empty?()) {
         return ();
-    }
-
-    ;; if no members
-
-    if (members == ) {
-         
-    }
-
-    if (active? = 0) { ;; deploy
-
     }
 
     slice cs = in_msg_full.begin_parse();
@@ -119,118 +105,118 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
     load_data();
 
-    if (op == op::vote) {
+    if (op == op::approve_transaction) {
 
-        int member_index = in_msg_body~load_uint(8);
-        int voting_index = in_msg_body~load_uint(8);
+        int wallet_index = in_msg_body~load_uint(8);
+        int transaction_index = in_msg_body~load_uint(8);
 
-        ;; get voting by voting_index
+        ;; get transaction by transaction_index
 
-        (slice voting, int found?) = votings.udict_get?(8, voting_index);
+        (slice transaction, int found?) = pending_transactions.udict_get?(8, transaction_index);
         throw_unless(200, found?);
 
-        ;; Parse voting
+        ;; Parse transaction
 
-        int voting_type = voting~load_uint(4); ;; voting_type
-        int deadline = voting~load_uint(32); ;; deadline
-        cell voting_info = voting~load_ref(); ;; voting_info
-        cell votes = voting~load_ref(); ;; votes
-        int total_votes = voting~load_uint(32); ;; total_votes
+        int transaction_type = transaction~load_uint(4); ;; transaction_type
+        int deadline = transaction~load_uint(32); ;; deadline
+        cell transaction_info = transaction~load_ref(); ;; transaction_info
+        cell approves = transaction~load_ref(); ;; approves
+        int approve_points = transaction~load_uint(32); ;; approve_points
 
-        ;; add vote
+        ;; add approve
 
-        int success? = votes~udict_add?(8, member_index, voting);
+        int success? = approves~udict_add?(8, wallet_index, transaction);
 
-        ;; get info about member from members
+        ;; get info about wallet from authorized_wallets
 
-        (slice member_info, int success?) = members.udict_get?(8, member_index);
-        throw_unless(111, success?); ;; throw if there is not such a member
+        (slice wallet_info, int success?) = authorized_wallets.udict_get?(8, wallet_index);
+        throw_unless(111, success?); ;; throw if there is not such a wallet
 
-        slice member_addr = member_info~load_msg_addr();
-        int voice_strength = member_info~load_uint(32);
-        int revenue_position = member_info~load_uint(32);
+        slice wallet_addr = wallet_info~load_msg_addr();
+        int approval_points = wallet_info~load_uint(32);
+        int distribution_points = wallet_info~load_uint(32);
 
-        ;; Calculate new total voting
+        ;; Calculate new total transaction
 
-        int new_total_votes = total_votes + voice_strength;
+        int new_approve_points = approve_points + approval_points;
 
-        ;; Parse config
+        ;; Parse settings
 
-        slice config_cs = config.begin_parse();
-        int max_members = config_cs~load_uint(8); ;; skip 
-        int agreement_percent = config_cs~load_uint(8);
+        slice settings_cs = settings.begin_parse();
+        int max_authorized_wallets = settings_cs~load_uint(8); ;; skip 
+        int agreement_percent = settings_cs~load_uint(8);
 
-        int votes_for_approval = agreement_percent / total_voices * 100;
+        int approves_for_approval = agreement_percent / total_credits * 100;
 
-        ;; Do actions in case of approval, otherwise save vote
+        ;; Do pending_transactions in case of approval, otherwise save approve
 
-        if (new_total_votes > votes_for_approval) {
+        if (new_approve_points > approves_for_approval) {
 
-            slice voting_info_cs = voting_info.begin_parse();
+            slice transaction_info_cs = transaction_info.begin_parse();
 
-            ;; Do actions
+            ;; Do pending_transactions
 
-            if (voting_type == vt::add_member) {
+            if (transaction_type == tt::add_wallet) {
 
-                (int last_member_index, _, _) = votings.udict_get_max?(8);
-                int new_member_index = last_member_index + 1;
+                (int last_wallet_index, _, _) = pending_transactions.udict_get_max?(8);
+                int new_wallet_index = last_wallet_index + 1;
 
-                voting_info_cs~load_msg_addr(); ;; slice member_to_add_addr
-                int voice_strength = voting_info_cs~load_uint(32);
-                voting_info_cs~load_uint(32); ;; int revenue_position
+                transaction_info_cs~load_msg_addr(); ;; slice wallet_to_add_addr
+                int approval_points = transaction_info_cs~load_uint(32);
+                transaction_info_cs~load_uint(32); ;; int distribution_points
 
-                ;; Add new member to dict
+                ;; Add new wallet to dict
 
-                if (new_member_index < max_members) {
-                    members~udict_add?(8, new_member_index, voting_info_cs);
+                if (new_wallet_index < max_authorized_wallets) {
+                    authorized_wallets~udict_add?(8, new_wallet_index, transaction_info_cs);
                 }
 
-                ;; Increase total voices
+                ;; Increase total approves
 
-                total_voices += voice_strength;
-
-                save_data();
-                return ();
-
-            }
-
-            if (voting_type == vt::terminate_membership) {
-
-                int member_to_delete_index = voting_info_cs~load_uint(8);
-
-                ;; Delete member from dict
-
-                members.udict_delete?(8, member_to_delete_index);
-
-                ;; Decrease total voices
-
-                total_voices -= voice_strength;
+                total_credits += approval_points;
 
                 save_data();
                 return ();
 
             }
 
-            if (voting_type == vt::route_revenue) {
+            if (transaction_type == tt::delete_wallet) {
 
-                int revenue_to_route = voting_info_cs~load_uint(32); ;; int amount
+                int wallet_to_delete_index = transaction_info_cs~load_uint(8);
 
-                ;; Route revenue
+                ;; Delete wallet from dict
 
-                (int key, slice value, int success?) = members.udict_get_min?(64);
+                authorized_wallets.udict_delete?(8, wallet_to_delete_index);
+
+                ;; Decrease total approves
+
+                total_credits -= approval_points;
+
+                save_data();
+                return ();
+
+            }
+
+            if (transaction_type == tt::withdraw_ton) {
+
+                int ton_to_route = transaction_info_cs~load_uint(32); ;; int amount
+
+                ;; Route ton
+
+                (int key, slice value, int success?) = authorized_wallets.udict_get_min?(64);
 
                 while (success?) {
 
-                    slice member_addr = member_info~load_msg_addr();
-                    int voice_strength = member_info~load_uint(32);
-                    int revenue_position = member_info~load_uint(32);
+                    slice wallet_addr = wallet_info~load_msg_addr();
+                    int approval_points = wallet_info~load_uint(32);
+                    int distribution_points = wallet_info~load_uint(32);
 
-                    int member_revenue = revenue_to_route / total_voices * voice_strength;
+                    int wallet_ton = ton_to_route / total_credits * approval_points;
                 
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
-                        .store_slice(member_addr)
-                        .store_coins(member_revenue)
+                        .store_slice(wallet_addr)
+                        .store_coins(wallet_ton)
                         .store_uint(0, 107)
                         .end_cell();
                     send_raw_message(msg, 0);
@@ -241,13 +227,13 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
             }
 
-            if (voting_type == vt::arbitrary_transaction) {
+            if (transaction_type == tt::arbitrary_transaction) {
 
-                slice destination = voting_info_cs~load_msg_addr(); ;; destination
-                int amount = voting_info_cs~load_uint(32); ;; amount
-                cell msg_body = voting_info_cs~load_ref(); ;; msg_body
+                slice destination = transaction_info_cs~load_msg_addr(); ;; destination
+                int amount = transaction_info_cs~load_uint(32); ;; amount
+                cell msg_body = transaction_info_cs~load_ref(); ;; msg_body
 
-                ;; Arbitrary transaction
+                ;; Arbitrary transtransaction
 
                 var msg = begin_cell()
                         .store_uint(0x18, 6)
@@ -263,19 +249,9 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
             }
 
-            if (voting_type == vt::change_config) {
+            if (transaction_type == tt::change_settings) {
 
-                config = voting_info_cs~load_ref(); ;; parse and save new config
-
-                save_data();
-                return ();
-
-            }
-
-            if (voting_type == vt::deactivate_root) {
-
-                max_members = in_msg_body~load_uint(8);
-                agreement_percent = in_msg_body~load_uint(8);
+                settings = transaction_info_cs~load_ref(); ;; parse and save new settings
 
                 save_data();
                 return ();
@@ -284,120 +260,120 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
         } else {
 
-            votes~udict_add?(8, voting_index, voting);
+            approves~udict_add?(8, transaction_index, transaction);
         }
 
     }
 
-    ;; Initiate voting msg: int member_index, int voting_index, cell voting_cell
+    ;; start transaction msg: int wallet_index, int transaction_index, cell transaction_cell
 
-    if (op == op::initiate) {
+    if (op == op::propose_transaction) {
 
-        int member_index = in_msg_body~load_uint(8);
+        int wallet_index = in_msg_body~load_uint(8);
 
-        check_membership(sender_address, member_index);
+        check_authority(sender_address, wallet_index);
 
-        int voting_index = in_msg_body~load_uint(8);
-        cell voting_cell = in_msg_body~load_ref();
+        int transaction_index = in_msg_body~load_uint(8);
+        cell transaction_cell = in_msg_body~load_ref();
 
-        slice voting_cell_cs = voting_cell.begin_parse();
+        slice transaction_cell_cs = transaction_cell.begin_parse();
 
-        ;; Check voting info
+        ;; Check transaction info
 
-        int voting_type = voting_cell_cs.preload_uint(4);
-        int deadline = voting_cell_cs.preload_uint(32);
-        cell voting_info = voting_cell_cs.preload_ref();
-        cell votes = voting_cell_cs.preload_ref();
-        int total_votes = voting_cell_cs.preload_uint(32);
+        int transaction_type = transaction_cell_cs.preload_uint(4);
+        int deadline = transaction_cell_cs.preload_uint(32);
+        cell transaction_info = transaction_cell_cs.preload_ref();
+        cell approves = transaction_cell_cs.preload_ref();
+        int approve_points = transaction_cell_cs.preload_uint(32);
 
-        slice voting_info_cs = voting_info.begin_parse();
+        slice transaction_info_cs = transaction_info.begin_parse();
 
-        ;; Index 0: Add member
-        ;; voting_info: slice member_to_add_addr
+        ;; Index 0: Add wallet
+        ;; transaction_info: slice wallet_to_add_addr
 
-        if (voting_type == vt::add_member) {
+        if (transaction_type == tt::add_wallet) {
 
-            ;; Check voting_info for initiating adding member
+            ;; Check transaction_info for initiating adding wallet
 
-            voting_info_cs~load_msg_addr(); ;; slice member_to_add_addr
-            voting_info_cs~load_uint(32); ;; int voice_strength
-            voting_info_cs~load_uint(32); ;; int revenue_position
+            transaction_info_cs~load_msg_addr(); ;; slice wallet_to_add_addr
+            transaction_info_cs~load_uint(32); ;; int approval_points
+            transaction_info_cs~load_uint(32); ;; int distribution_points
 
-            add_cached_voting(votings, voting_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 1: Eliminate member
-        ;; voting_info: slice member_to_eliminate_addr
-
-        if (voting_type == vt::terminate_membership) {
-
-            ;; Check voting_info for initiating termination of membership
-
-            voting_info_cs~load_msg_addr(); ;; slice member_to_eliminate_addr
-
-            add_cached_voting(votings, voting_cell);
+            add_cached_transaction(pending_transactions, transaction_cell);
 
             save_data();
             return ();
 
         }
 
-        ;; Index 2: Revenue routing voting
-        ;; voting_info: int amount
+        ;; Index 1: Eliminate wallet
+        ;; transaction_info: slice wallet_to_eliminate_addr
 
-        if (voting_type == vt::route_revenue) {
+        if (transaction_type == tt::delete_wallet) {
 
-            ;; Check voting_info for initiating revenue routing
+            ;; Check transaction_info for initiating termination of authority
 
-            voting_info_cs~load_uint(32); ;; int amount
+            transaction_info_cs~load_msg_addr(); ;; slice wallet_to_eliminate_addr
 
-            add_cached_voting(votings, voting_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 3: Arbitrary transaction
-        ;; voting_info: slice destination, int amount, cell msg_body
-
-        if (voting_type == vt::arbitrary_transaction) {
-
-            ;; Check voting_info for initiating arbitrary transaction
-
-            voting_info_cs~load_msg_addr(); ;; destination
-            voting_info_cs~load_uint(32); ;; amount
-            voting_info_cs~load_ref(); ;; msg_body
-
-            add_cached_voting(votings, voting_cell);
+            add_cached_transaction(pending_transactions, transaction_cell);
 
             save_data();
             return ();
 
         }
 
-        ;; Index 4: Initiate change config
-        ;; voting_info: 
+        ;; Index 2: ton routing transaction
+        ;; transaction_info: int amount
 
-        if (voting_type == vt::change_config) {
+        if (transaction_type == tt::withdraw_ton) {
 
-            ;; Check voting_info for changing config
+            ;; Check transaction_info for initiating ton routing
 
-            voting_info_cs~load_uint(8); ;; max_members
-            voting_info_cs~load_uint(8); ;; agreement_percent
+            transaction_info_cs~load_uint(32); ;; int amount
 
-            add_cached_voting(votings, voting_cell);
+            add_cached_transaction(pending_transactions, transaction_cell);
 
             save_data();
             return ();
 
         }
 
-        if (voting_type == vt::deactivate_contract) {
+        ;; Index 3: Arbitrary transtransaction
+        ;; transaction_info: slice destination, int amount, cell msg_body
+
+        if (transaction_type == tt::random_transaction) {
+
+            ;; Check transaction_info for initiating arbitrary transtransaction
+
+            transaction_info_cs~load_msg_addr(); ;; destination
+            transaction_info_cs~load_uint(32); ;; amount
+            transaction_info_cs~load_ref(); ;; msg_body
+
+            add_cached_transaction(pending_transactions, transaction_cell);
+
+            save_data();
+            return ();
+
+        }
+
+        ;; Index 4: start change settings
+        ;; transaction_info: 
+
+        if (transaction_type == tt::change_settings) {
+
+            ;; Check transaction_info for changing settings
+
+            transaction_info_cs~load_uint(8); ;; max_authorized_wallets
+            transaction_info_cs~load_uint(8); ;; agreement_percent
+
+            add_cached_transaction(pending_transactions, transaction_cell);
+
+            save_data();
+            return ();
+
+        }
+
+        if (transaction_type == tt::deactivate_contract) {
 
             save_data();
             return ();
@@ -406,16 +382,32 @@ global slice cached_voting; ;; int voting_type, int deadline, cell voting_info, 
 
     }
 
-    if (op == op::exit_from_root) {
+    if (op == op::quit_contract) {
 
-        int member_index = in_msg_body~load_uint(8);
+        int wallet_index = in_msg_body~load_uint(8);
 
-        check_membership(sender_address, member_index);
+        check_authority(sender_address, wallet_index);
 
-        members.udict_delete?(8, member_index);
+        authorized_wallets.udict_delete?(8, wallet_index);
 
         save_data();
         return ();
+
+    }
+
+    if (op == op::activate_root) {
+
+        throw_unless(666, get_data().begin_parse().slice_empty());
+
+        max_authorized_wallets = in_msg_body~load_uint(8);
+        transaction_approval_percent = in_msg_body~load_uint(8);
+
+        wallet_sha256_hash = in_msg_body~
+        wallet_addr = in_msg_body~load_msg_addr();
+        approval_points = 
+        distribution_points
+
+        active?()
 
     }
 

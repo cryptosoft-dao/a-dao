@@ -12,18 +12,18 @@ import {
 } from '@ton/core';
 
 export type RootConfig = {
-    MaxMembers: bigint | number;
+    MaxWallets: bigint | number;
     AgreementPercent: bigint | number;
-    Members: Dictionary<bigint, Cell>;
+    Wallets: Dictionary<bigint, Cell>;
     TotalVoices: bigint | number;
     TotalRevenuePoints: bigint | number;
     Votings: Dictionary<bigint, Cell>;
 }
 export function rootConfigToCell(config: RootConfig): Cell {
     return beginCell()
-        .storeUint(config.MaxMembers, 8)
+        .storeUint(config.MaxWallets, 8)
         .storeUint(config.AgreementPercent, 8)
-        .storeDict(config.Members)
+        .storeDict(config.Wallets)
         .storeUint(config.TotalVoices, 32)
         .storeUint(config.TotalRevenuePoints, 32)
         .storeDict(config.Votings)
@@ -71,7 +71,7 @@ export class Root implements Contract {
         });
     }
     
-    async sendVoteTerminateMembership(
+    async sendVoteTerminateWalletship(
         provider: ContractProvider, 
         via: Sender,
         value: bigint,
@@ -173,7 +173,7 @@ export class Root implements Contract {
         });
     }
 
-    async sendInitiateTerminateMembership(
+    async sendInitiateTerminateWalletship(
         provider: ContractProvider,
         via: Sender,
         value: bigint,

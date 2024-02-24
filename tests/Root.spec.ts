@@ -7,40 +7,65 @@ import { compile } from '@ton/blueprint';
 
 describe('Root', () => {
 
-    let code: Cell;
+    const blockchainStartTime = 100;
+
+    let blockchain: Blockchain;
+
+    let rootCode: Cell;
+    
+    let root: SandboxContract<Root>;
+    let Wallet1: SandboxContract<TreasuryContract>;
+    let Wallet2: SandboxContract<TreasuryContract>;
+    let Wallet3: SandboxContract<TreasuryContract>;
+
 
     beforeAll(async () => {
 
-        code = await compile('Root');
-
-    });
-
-    let blockchain: Blockchain;
-    let root: SandboxContract<Root>;
-    let firstMember: SandboxContract<TreasuryContract>;
-    let econdMember: SandboxContract<TreasuryContract>;
-    let thirdMember: SandboxContract<TreasuryContract>;
-
-
-    beforeEach(async () => {
+        rootCode = await compile('Root');
+        Wallet1 = await blockchain.treasury('Wallet1');
+        Wallet2 = await blockchain.treasury('Wallet2');
+        Wallet3 = await blockchain.treasury('Wallet3');
 
         blockchain = await Blockchain.create();
+        blockchain.now = blockchainStartTime;
 
         // Storage
 
-        const MaxMembers = BigInt(255);
+        const MaxWallets = BigInt(255);
         const AgreementPercent = BigInt(100);
-        const Members = Dictionary.empty<bigint, Cell>();
+        const Wallets = Dictionary.empty<bigint, Cell>();
         const TotalVoices = 1;
         const TotalRevenuePoints = 10;
         const Votings = Dictionary.empty<bigint, Cell>();
 
-        beforeEach(async () => {
+        blockchain = await Blockchain.create();
+        blockchain.now = blockchainStartTime;
 
-            blockchain.now = 1708621037;
-            
+        root = blockchain.openContract(
+            Root.createFromConfig(
+                {
+                    MaxWallets: MaxWallets,
+                    AgreementPercent: AgreementPercent,
+                    Wallets: Wallets,
+                    TotalVoices: TotalVoices,
+                    TotalRevenuePoints: TotalRevenuePoints,
+                    Votings: Votings,
+                }, 
+                rootCode,
+            ),
+        );
+
+        const rootDeploy = await root.sendDeploy(Wallet1.getSender(), toNano('0.05'));
+
+        expect(rootDeploy.transactions).toHaveTransaction({
+            from: Wallet1.address,
+            to: root.address,
+            deploy: true,
+            success: true,
         });
 
+        
+        
 
     });
 
