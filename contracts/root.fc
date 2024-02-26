@@ -1,94 +1,36 @@
 #include "imports/stdlib.fc";
 
-;; Operation codes
+const int op::create_routing_pool = 0;
+const int op::activate_routing_pool = 1;
 
-const int op::activate_root = 0;
-const int op::propose_transaction = 1;
-const int op::approve_transaction = 2;
-const int op::quit_root = 3;
+global int blockchain_fee;
+global int protocol_fee;
+global int referal_discount_denominator;
 
-;; Transaction types
+global cell routing_pool_code;
 
-const int tt::invite_wallet = 0;
-const int tt::exclude_wallet = 1;
-const int tt::distribute_ton = 2;
-const int tt::arbitrary_transaction = 3;
-const int tt::change_settings = 4;
-
-;; Global variables
-
-global slice root_minter_addr;
-global int max_authorized_wallets;
-global int transaction_approval_percent;
-global cell authorized_wallets; ;; key: int wallet_sha256_hash // value (cell): slice wallet_addr,  int approval_points, int distribution_points
-global int total_approval_points;
-global int total_distribution_points;
-global cell pending_transactions; ;; key: int wallet_sha256_hash // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
-
-() save_data() impure inline {
-
-    set_data(
-        begin_cell()
-            .store_uint(max_authorized_wallets, 8)
-            .store_uint(agreement_percent, 8)
-            .store_dict(authorized_wallets)
-            .store_uint(total_approval_points, 32)
-            .store_uint(total_distribution_points, 32)
-            .store_dict(pending_transactions)
-        .end_cell()
-    );
+cell calculate_routing_pool_routing_pool_initial_state(int routing_pool_index, cell routing_pool_code) {
+  cell routing_pool_data = begin_cell().store_uint(routing_pool_index, 64).store_slice(my_address()).end_cell();
+  return (
+    begin_cell()
+        .store_dict(routing_pool_code)
+        .store_dict(routing_pool_data)
+    .end_cell()
+  );
 }
 
-() load_data() impure inline { 
-
-    slice ds = get_data().begin_parse();
-
-    settings = ds~load_ref();
-    authorized_wallets = ds~load_dict();
-    total_credits = ds~load_uint(32);
-    total_points = ds~load_uint(32);
-    pending_transactions = ds~load_dict();
-    ds.end_parse();
+slice calculate_routing_pool_address(int workchain, cell routing_pool_initial_state) {
+  return 
+    begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain, 8)
+        .store_uint(cell_hash(routing_pool_initial_state), 256)
+    .end_cell()
+    .begin_parse();
 }
 
-() clear_pending_transactions_queue() inline {
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
 
-    (int key, slice value, int success?) = pending_transactions.udict_get_min?(256);
-
-    while (success?) {
-        (key, value, success?) = pending_transactions.udict_get_next?(256, key);
-
-        value~skip_bits(8); ;; skip transaction_type
-        value~load_uint(32); ;; deadline
-    }
-}
-
-() add_cached_transaction() inline {
-
-    (int key, slice value, int success?) = udict_get_max?(pending_transactions, 64);
-
-    if (key = 255) {
-        clear_pending_transactions_queue(pending_transactions);
-    }
-
-    if (success?) {
-        pending_transactions~udict_add?(64, key + 1, cached_transaction);
-    }
-}
-
-(int) check_authority(slice sender_address, int wallet_index) inline {
-
-    (slice wallet_info, int success?) = authorized_wallets.udict_get?(8, wallet_index);
-
-    if (equal_slices(sender_address, wallet_info~load_msg_addr())) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    
     if (in_msg_body.slice_empty?()) {
         return ();
     }
@@ -105,312 +47,54 @@ global cell pending_transactions; ;; key: int wallet_sha256_hash // value (cell)
 
     load_data();
 
-    if (op == op::approve_transaction) {
+    if (op == op::create_routing_pool) {
 
-        int wallet_index = in_msg_body~load_uint(8);
-        int transaction_index = in_msg_body~load_uint(8);
+        referal? = in_msg_body~load_uint(1);
+        approval_points = in_msg_body~load_uint(8);
+        distribution_points = in_msg_body~load_uint(8);
 
-        ;; get transaction by transaction_index
+        max_authorized_addresses = in_msg_body~load_uint(8);
+        agreement_percent = in_msg_body~load_uint(8);
+        routing_pool_invitations = in_msg_body-load_dict();
 
-        (slice transaction, int found?) = pending_transactions.udict_get?(8, transaction_index);
-        throw_unless(200, found?);
+        cell routing_pool_initial_state = calculate_routing_pool_routing_pool_initial_state(deployer_address, routing_pool_code);
+        slice routing_pool_address = calculate_routing_pool_address(workchain(), routing_pool_initial_state);
 
-        ;; Parse transaction
+        cell message = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(to)
+            .store_coins(amount)
+            .store_uint(7, 108)
+            .store_ref(routing_pool_initial_state)
+            .store_ref(
+                begin_cell()
+                    .store_uint(op::activate_routing_pool, 32)
+                    .store_slice(deployer_address)
+                    .store_uint(approval_points, 8)
+                    .store_uint(distribution_points, 8)
+                    .store_uint(max_authorized_addresses, 8)
+                    .store_uint(agreement_percent, 8)
+                    .store_dict(authorized_addresses)
+                    .store_uint(total_approval_points, 32)
+                    .store_uint(total_distribution_points, 32)
+                .end_cell()
+            )
+        .end_cell();
 
-        int transaction_type = transaction~load_uint(4); ;; transaction_type
-        int deadline = transaction~load_uint(32); ;; deadline
-        cell transaction_info = transaction~load_ref(); ;; transaction_info
-        cell approves = transaction~load_ref(); ;; approves
-        int approve_points = transaction~load_uint(32); ;; approve_points
-
-        ;; add approve
-
-        int success? = approves~udict_add?(8, wallet_index, transaction);
-
-        ;; get info about wallet from authorized_wallets
-
-        (slice wallet_info, int success?) = authorized_wallets.udict_get?(8, wallet_index);
-        throw_unless(111, success?); ;; throw if there is not such a wallet
-
-        slice wallet_addr = wallet_info~load_msg_addr();
-        int approval_points = wallet_info~load_uint(32);
-        int distribution_points = wallet_info~load_uint(32);
-
-        ;; Calculate new total transaction
-
-        int new_approve_points = approve_points + approval_points;
-
-        ;; Parse settings
-
-        slice settings_cs = settings.begin_parse();
-        int max_authorized_wallets = settings_cs~load_uint(8); ;; skip 
-        int agreement_percent = settings_cs~load_uint(8);
-
-        int approves_for_approval = agreement_percent / total_credits * 100;
-
-        ;; Do pending_transactions in case of approval, otherwise save approve
-
-        if (new_approve_points > approves_for_approval) {
-
-            slice transaction_info_cs = transaction_info.begin_parse();
-
-            ;; Do pending_transactions
-
-            if (transaction_type == tt::add_wallet) {
-
-                (int last_wallet_index, _, _) = pending_transactions.udict_get_max?(8);
-                int new_wallet_index = last_wallet_index + 1;
-
-                transaction_info_cs~load_msg_addr(); ;; slice wallet_to_add_addr
-                int approval_points = transaction_info_cs~load_uint(32);
-                transaction_info_cs~load_uint(32); ;; int distribution_points
-
-                ;; Add new wallet to dict
-
-                if (new_wallet_index < max_authorized_wallets) {
-                    authorized_wallets~udict_add?(8, new_wallet_index, transaction_info_cs);
-                }
-
-                ;; Increase total approves
-
-                total_credits += approval_points;
-
-                save_data();
-                return ();
-
-            }
-
-            if (transaction_type == tt::delete_wallet) {
-
-                int wallet_to_delete_index = transaction_info_cs~load_uint(8);
-
-                ;; Delete wallet from dict
-
-                authorized_wallets.udict_delete?(8, wallet_to_delete_index);
-
-                ;; Decrease total approves
-
-                total_credits -= approval_points;
-
-                save_data();
-                return ();
-
-            }
-
-            if (transaction_type == tt::withdraw_ton) {
-
-                int ton_to_route = transaction_info_cs~load_uint(32); ;; int amount
-
-                ;; Route ton
-
-                (int key, slice value, int success?) = authorized_wallets.udict_get_min?(64);
-
-                while (success?) {
-
-                    slice wallet_addr = wallet_info~load_msg_addr();
-                    int approval_points = wallet_info~load_uint(32);
-                    int distribution_points = wallet_info~load_uint(32);
-
-                    int wallet_ton = ton_to_route / total_credits * approval_points;
-                
-                    var msg = begin_cell()
-                        .store_uint(0x10, 6)
-                        .store_slice(wallet_addr)
-                        .store_coins(wallet_ton)
-                        .store_uint(0, 107)
-                        .end_cell();
-                    send_raw_message(msg, 0);
-                }
-
-                save_data();
-                return ();
-
-            }
-
-            if (transaction_type == tt::arbitrary_transaction) {
-
-                slice destination = transaction_info_cs~load_msg_addr(); ;; destination
-                int amount = transaction_info_cs~load_uint(32); ;; amount
-                cell msg_body = transaction_info_cs~load_ref(); ;; msg_body
-
-                ;; Arbitrary transtransaction
-
-                var msg = begin_cell()
-                        .store_uint(0x18, 6)
-                        .store_slice(destination)
-                        .store_coins(amount)
-                        .store_uint(1, 107)
-                        .store_ref(msg_body)
-                    .end_cell();
-                send_raw_message(msg, 0);
-
-                save_data();
-                return ();
-
-            }
-
-            if (transaction_type == tt::change_settings) {
-
-                settings = transaction_info_cs~load_ref(); ;; parse and save new settings
-
-                save_data();
-                return ();
-
-            }
-
-        } else {
-
-            approves~udict_add?(8, transaction_index, transaction);
-        }
+        send_raw_message(message, 0);
 
     }
 
-    ;; start transaction msg: int wallet_index, int transaction_index, cell transaction_cell
+}
 
-    if (op == op::propose_transaction) {
+() recv_external() impure inline {
 
-        int wallet_index = in_msg_body~load_uint(8);
+    if ()
 
-        check_authority(sender_address, wallet_index);
+}
 
-        int transaction_index = in_msg_body~load_uint(8);
-        cell transaction_cell = in_msg_body~load_ref();
-
-        slice transaction_cell_cs = transaction_cell.begin_parse();
-
-        ;; Check transaction info
-
-        int transaction_type = transaction_cell_cs.preload_uint(4);
-        int deadline = transaction_cell_cs.preload_uint(32);
-        cell transaction_info = transaction_cell_cs.preload_ref();
-        cell approves = transaction_cell_cs.preload_ref();
-        int approve_points = transaction_cell_cs.preload_uint(32);
-
-        slice transaction_info_cs = transaction_info.begin_parse();
-
-        ;; Index 0: Add wallet
-        ;; transaction_info: slice wallet_to_add_addr
-
-        if (transaction_type == tt::add_wallet) {
-
-            ;; Check transaction_info for initiating adding wallet
-
-            transaction_info_cs~load_msg_addr(); ;; slice wallet_to_add_addr
-            transaction_info_cs~load_uint(32); ;; int approval_points
-            transaction_info_cs~load_uint(32); ;; int distribution_points
-
-            add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 1: Eliminate wallet
-        ;; transaction_info: slice wallet_to_eliminate_addr
-
-        if (transaction_type == tt::delete_wallet) {
-
-            ;; Check transaction_info for initiating termination of authority
-
-            transaction_info_cs~load_msg_addr(); ;; slice wallet_to_eliminate_addr
-
-            add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 2: ton routing transaction
-        ;; transaction_info: int amount
-
-        if (transaction_type == tt::withdraw_ton) {
-
-            ;; Check transaction_info for initiating ton routing
-
-            transaction_info_cs~load_uint(32); ;; int amount
-
-            add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 3: Arbitrary transtransaction
-        ;; transaction_info: slice destination, int amount, cell msg_body
-
-        if (transaction_type == tt::random_transaction) {
-
-            ;; Check transaction_info for initiating arbitrary transtransaction
-
-            transaction_info_cs~load_msg_addr(); ;; destination
-            transaction_info_cs~load_uint(32); ;; amount
-            transaction_info_cs~load_ref(); ;; msg_body
-
-            add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        ;; Index 4: start change settings
-        ;; transaction_info: 
-
-        if (transaction_type == tt::change_settings) {
-
-            ;; Check transaction_info for changing settings
-
-            transaction_info_cs~load_uint(8); ;; max_authorized_wallets
-            transaction_info_cs~load_uint(8); ;; agreement_percent
-
-            add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        if (transaction_type == tt::deactivate_contract) {
-
-            save_data();
-            return ();
-
-        }
-
-    }
-
-    if (op == op::quit_contract) {
-
-        int wallet_index = in_msg_body~load_uint(8);
-
-        check_authority(sender_address, wallet_index);
-
-        authorized_wallets.udict_delete?(8, wallet_index);
-
-        save_data();
-        return ();
-
-    }
-
-    if (op == op::activate_root) {
-
-        throw_unless(666, get_data().begin_parse().slice_empty());
-
-        max_authorized_wallets = in_msg_body~load_uint(8);
-        transaction_approval_percent = in_msg_body~load_uint(8);
-
-        wallet_sha256_hash = in_msg_body~
-        wallet_addr = in_msg_body~load_msg_addr();
-        approval_points = 
-        distribution_points
-
-        active?()
-
-    }
-
-    throw(0xffff);
-
+slice get_routing_pool_address_by_deployer_address (slice deployer_address) method_id {
+    var (_, _, _, nft_item_code, _) = load_data();
+    cell routing_pool_initial_state = calculate_nft_item_routing_pool_initial_state(index, nft_item_code);
+    return calculate_nft_item_address(0, routing_pool_initial_state);
 }
