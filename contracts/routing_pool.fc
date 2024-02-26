@@ -20,8 +20,13 @@ const int tt::transaction_approval_percent = 4;
 
 ;; Global variables
 
-global slice root_address;
 global slice deployer_address;
+global slice root_address;
+
+global int blockchain_fee;
+global int transactions_fee;
+global int creation_fee;
+global int referal_creation_discount_denominator;
 
 global int max_authorized_addresses;
 global int transaction_approval_percent;

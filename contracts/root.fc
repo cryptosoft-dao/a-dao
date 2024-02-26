@@ -4,8 +4,9 @@ const int op::create_routing_pool = 0;
 const int op::activate_routing_pool = 1;
 
 global int blockchain_fee;
-global int protocol_fee;
-global int referal_discount_denominator;
+global int transactions_fee;
+global int creation_fee;
+global int referal_creation_discount_denominator;
 
 global cell routing_pool_code;
 
