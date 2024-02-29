@@ -41,21 +41,30 @@ describe('Root', () => {
 
         // Storage
 
-        const MaxWallets = BigInt(255);
-        const AgreementPercent = BigInt(100);
-        const Wallets = Dictionary.empty<bigint, Cell>();
-        const TotalVoices = 1;
-        const TotalRevenuePoints = 10;
-        const Votings = Dictionary.empty<bigint, Cell>();
-
         blockchain = await Blockchain.create();
         blockchain.now = blockchainStartTime;
+
+        // Params
 
         root = blockchain.openContract(
             Root.createFromConfig(
                 {
-                    RoutingPoolDeployFee: BigInt(3000000),
                     RoutingPoolCode: routingPoolCode,
+                    FeesInfo: 
+                        beginCell()
+                            .storeUint(toNano('0.03'), 32) // CreationBlockchainFee
+                            .storeUint(toNano('1'), 32) // CreationProtocolFee
+                            .storeUint(toNano('0.03'), 32) // TransactionBlockchainFee
+                            .storeUint(toNano('1'), 32) // TransactionProtocolFee
+                        .endCell(),
+                    ReferralProgram: 
+                        beginCell()
+                            .storeUint(BigInt(7), 3) // MaxReferalLevel
+                            .storeUint(BigInt(77), 7) // CreationfeeDiscountNumerator
+                            .storeUint(BigInt(100), 7) // CreationDiscountDenominator
+                            .storeUint(BigInt(77), 7) // TransactionFeeDiscountNumerator
+                            .storeUint(BigInt(100), 7) // TransactionFeeDiscountDenominator
+                        .endCell(),
                 }, 
                 rootCode,
             ),

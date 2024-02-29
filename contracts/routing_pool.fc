@@ -2,12 +2,12 @@
 
 ;; Operation codes
 
-const int op::activate_routing_pool = 1;
-const int op::propose_transaction = 2;
-const int op::approve_transaction = 3;
-const int op::quit_routing_pool = 4;
-const int op::create_routing_pool = 5;
-const int op::deactivate_routing_pool = 6;
+const int op::process_deploy_message = 0;
+const int op::change_transaction_approval_percent = 1
+const int op::change_transaction_approval_percent = 2;
+const int op::propose_transaction = 3;
+const int op::approve_transaction = 4;
+const int op::quit_routing_pool = 5;
 
 ;; Transaction types
 
@@ -15,29 +15,55 @@ const int tt::invite_address = 0;
 const int tt::exclude_address = 1;
 const int tt::distribute_ton = 2;
 const int tt::arbitrary_transaction = 3;
-const int tt::change_max_authorized_addresses = 4;
-const int tt::transaction_approval_percent = 4;
+const int tt::change_transaction_approval_percent = 4;
 
-;; Global variables
+;; Storage globals
 
-global slice deployer_address;
-global slice root_address;
-
-global int blockchain_fee;
-global int transactions_fee;
-global int creation_fee;
-global int referal_creation_discount_denominator;
-
-global int max_authorized_addresses;
-global int transaction_approval_percent;
-global int max_pending_transactions;
-global int max_pending_invitations;
-
-global cell authorized_addresses; ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+global slice root_address; ;; slice 257bits ;; initial state
+global slice deployer_address_256; ;; slice 257bits ;; initial state
+global int transaction_fee;
+global int transaction_approval_percent; ;; int8 ;; on activation
+global cell pending_invitations; ;; on activation
+;; dict authorized_addresses
+    ;; Key: uint256 address_sha256_hash
+    ;; Value (cell)
+        ;; slice address
+        ;; int32 approval_points
+        ;; int32 distribution_points
+;; dict pending_transactions
+    ;; Key: uint256 address_sha256_hash
+    ;; Value (cell)
+        ;; int4 transaction_type
+        ;; int32 deadline
+        ;; cell transaction_info
+        ;; cell approves
+        ;; int32 approve_points
+global cell pending_transactions;
+;; dict pending_invitations
+    ;; Key:
+    ;; Value
+    ;; int transaction_type
+    ;; int deadline
+    ;; cell transaction_info
+    ;; cell approves
+    ;; int approve_points
+global int authorized_addresses;
 global int total_approval_points;
 global int total_distribution_points;
-global cell pending_transactions; ;; key: int address_sha256_hash // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
-global cell pending_invitations; ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+
+;; Storage functions
+
+() load_data() impure inline { 
+
+    slice ds = get_data().begin_parse();
+        root_address = ds~load_msg_addr();
+        deployer_address = ds~load_msg_addr();
+        config = ds~load_ref();
+        fees_info = ds~load_ref();
+        referral_program = ds~load_ref();
+        fees_info = ds~load_ref();
+    ds.end_parse();
+}
 
 () save_data() impure inline {
 
@@ -55,19 +81,42 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
     );
 }
 
-() load_data() impure inline { 
+;; Cell-parsing functions
 
-    slice ds = get_data().begin_parse();
-    deployer_address = ds~load_msg_addr()
-    max_authorized_addresses = ds~load_uint(8);
-    transaction_approval_percent = ds~
-    authorized_addresses = ds~load_dict();
-    total_approval_points = ds~load_uint(32)
-    total_distribution_points = ds~load_uint(32)
-    pending_transactions = ds~load_dict();
-    pending_invitations = ds~load_dict();
-    ds.end_parse();
+() parse_config(cell config) impure {
+    config_cs = config.begin_parse();
+    max_authorized_addresses = config_cs~load_int(8);
+    transaction_approval_percent = config_cs~load_int(8);
+    max_pending_transactions = config_cs~load_int(8);
+    max_pending_invitations = config_cs~load_int(8);
+}
 
+() parse_fees_info(cell fees_info) impure {
+    fees_info_cs = fees_info.begin_parse();
+    creation_blockchain_fee = fees_info_cs~load_uint(32);
+    creation_protocol_fee = fees_info_cs~load_uint(32);
+    transaction_blockchain_fee = fees_info_cs~load_uint(32);
+    transaction_protocol_fee = fees_info_cs~load_uint(32);
+}
+
+() parse_refferal_program(cell refferal_program) impure {
+    fees_info_cs = refferal_program.begin_parse();
+    max_referal_level = fees_info_cs~load_uint(3);
+    creation_fee_discount_numerator = fees_info_cs~load_uint(32);
+    creation_fee_discount_denominator = fees_info_cs~load_uint(32);
+    transaction_fee_discount_numerator = fees_info_cs~load_uint(32);
+    transaction_fee_discount_denominator = fees_info_cs~load_uint(32);
+}
+
+() parse_main(cell main_data) impure {
+    cs = main_data.begin_parse();
+    return (
+        cs~load_dict(), ;; dict authorized_addresses
+        cs~load_uint(), ;; uint32 total_approval_points
+        cs~load_uint(), ;; uint32 total_distribution_points
+        cs~load_dict(), ;; dict pending_transactions
+        cs~load_dict() ;; dict pending_invitations
+    );
 }
 
 () clear_pending_transactions_queue() inline {
@@ -106,7 +155,7 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
     }
 }
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     
     if (in_msg_body.slice_empty?()) {
         return ();
@@ -127,8 +176,6 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
     if (op == op::approve_transaction) {
 
         ;; Check if sender is an authorized routing pool wallet
-
-        
 
         int address_index = in_msg_body~load_uint(8);
         int transaction_index = in_msg_body~load_uint(8);
@@ -272,7 +319,7 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
 
             }
 
-            if (transaction_type == tt::change_settings) {
+            if (transaction_type == tt::set_up) {
 
                 settings = transaction_info_cs~load_ref(); ;; parse and save new settings
 
@@ -293,8 +340,6 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
     if (op == op::propose_transaction) {
 
         ;; Check if sender is an authorized routing pool wallet
-
-        
 
         int address_index = in_msg_body~load_uint(8);
 
@@ -386,21 +431,13 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
         ;; Index 4: start change settings
         ;; transaction_info: 
 
-        if (transaction_type == tt::change_settings) {
+        if (transaction_type == tt::set_up) {
 
             ;; Check transaction_info for changing settings
 
-            transaction_info_cs~load_uint(8); ;; max_authorized_addresses
             transaction_info_cs~load_uint(8); ;; agreement_percent
 
             add_cached_transaction(pending_transactions, transaction_cell);
-
-            save_data();
-            return ();
-
-        }
-
-        if (transaction_type == tt::deinitialize_contract) {
 
             save_data();
             return ();
@@ -411,15 +448,11 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
 
     if (op == op::accept_invitation_to_routing_pool) {
 
-        
-
     }
 
     if (op == op::quit_contract) {
 
         ;; Check if sender is an authorized routing pool wallet
-
-        
 
         int address_index = in_msg_body~load_uint(8);
 
@@ -429,6 +462,14 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
 
         save_data();
         return ();
+
+    }
+
+    if (op == process_deploy_message) {
+
+        throw_unless(666, sender_address == root_address);
+
+        ;; Add config immediately or add config later
 
     }
 
@@ -459,9 +500,7 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
 
     }
 
-    if (op::deactivate_routing_pool) {
-
-
+    if (op == op::update_approval_percent) {
 
     }
 
@@ -469,13 +508,14 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
 
 }
 
+;; Custom get-methods
+
 () get_routing_pool_data() {
 
     load_data();
 
     return (
-        deployer_address,
-        routing_pool_index,
+        deployer_address_sha256,
         max_authorized_addresses,
         transaction_approval_percent,
         authorized_addresses, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
@@ -485,4 +525,11 @@ global cell pending_invitations; ;; key: int address_sha256_hash // value (cell)
         pending_invitations, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
     );
 
+}
+
+;; NFT Get-Methods
+
+(int, int, slice, slice, cell) get_nft_data() method_id {
+  (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();
+  return (init?, index, collection_address, owner_address, content);
 }

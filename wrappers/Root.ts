@@ -12,13 +12,15 @@ import {
 } from '@ton/core';
 
 export type RootConfig = {
-    RoutingPoolDeployFee: number | bigint;
     RoutingPoolCode: Cell;
+    FeesInfo: Cell;
+    ReferralProgram: Cell;
 }
 export function serializeRootConfigToCell(config: RootConfig): Cell {
     return beginCell()
-        .storeUint(config.RoutingPoolDeployFee, 8)
         .storeRef(config.RoutingPoolCode)
+        .storeRef(config.FeesInfo)
+        .storeRef(config.ReferralProgram)
     .endCell();
 }
 
