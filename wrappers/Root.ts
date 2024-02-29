@@ -10,17 +10,22 @@ import {
     SendMode, 
     toNano 
 } from '@ton/core';
+import { RootOperationCodes, RoutingPoolOperationCodes, RoutingPoolTransactionTypes } from '../wrappers/Config';
 
 export type RootConfig = {
+    OwnerAddress: Address;
     RoutingPoolCode: Cell;
-    FeesInfo: Cell;
-    ReferralProgram: Cell;
+    TotalRoutingPools: number | bigint;
+    NextRoutingPoolCreationFee: number | bigint;
+    NextRoutingPoolTransactionFee: number | bigint;
 }
 export function serializeRootConfigToCell(config: RootConfig): Cell {
     return beginCell()
+        .storeAddress(config.OwnerAddress)
         .storeRef(config.RoutingPoolCode)
-        .storeRef(config.FeesInfo)
-        .storeRef(config.ReferralProgram)
+        .storeUint(config.TotalRoutingPools, 32)
+        .storeCoins(config.NextRoutingPoolCreationFee)
+        .storeCoins(config.NextRoutingPoolTransactionFee)
     .endCell();
 }
 
@@ -41,7 +46,9 @@ export class Root implements Contract {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().endCell(),
+            body: 
+                beginCell()
+                .endCell(),
         });
     }
 

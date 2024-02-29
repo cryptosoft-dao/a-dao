@@ -12,21 +12,15 @@ import {
 } from '@ton/core';
 
 export type RoutingPoolConfig = {
-    MaxWallets: bigint | number;
-    AgreementPercent: bigint | number;
-    Wallets: Dictionary<bigint, Cell>;
-    TotalVoices: bigint | number;
-    TotalRevenuePoints: bigint | number;
-    Votings: Dictionary<bigint, Cell>;
+    Active: number;
+    RootAddress: Address,
+    DeployerAddressSHA256: bigint,
 }
 export function serializeRoutingPoolConfigToCell(config: RoutingPoolConfig): Cell {
     return beginCell()
-        .storeUint(config.MaxWallets, 8)
-        .storeUint(config.AgreementPercent, 8)
-        .storeDict(config.Wallets)
-        .storeUint(config.TotalVoices, 32)
-        .storeUint(config.TotalRevenuePoints, 32)
-        .storeDict(config.Votings)
+        .storeUint(config.Active, 1) // false value
+        .storeAddress(config.RootAddress)
+        .storeUint(config.DeployerAddressSHA256, 256)
     .endCell();
 }
 
@@ -35,6 +29,12 @@ export class RoutingPool implements Contract {
 
     static createFromAddress(address: Address) {
         return new RoutingPool(address);
+    }
+
+    static createFromConfig(config: RoutingPoolConfig, code: Cell, workchain = 0) {
+        const data = serializeRoutingPoolConfigToCell(config);
+        const init = { code, data };
+        return new RoutingPool(contractAddress(workchain, init), init);
     }
 
     async sendVoteAddMember(

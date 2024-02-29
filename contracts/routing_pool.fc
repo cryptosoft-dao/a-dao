@@ -6,8 +6,8 @@ const int op::process_deploy_message = 0;
 const int op::activate_routing_pool = 1;
 const int op::propose_transaction = 2;
 const int op::approve_transaction = 3;
-const int op::accept_invitation_to_routing_pool = 5;
-const int op::quit_routing_pool = 6;
+const int op::accept_invitation_to_routing_pool = 4;
+const int op::quit_routing_pool = 5;
 
 ;; Transaction types
 
@@ -111,7 +111,43 @@ global int total_distribution_points; ;;uint32
     }
 }
 
-() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+() send_invites_to_routing_pool(cell pending_invitations) inline {
+
+        ;; Send invites to routing pool
+
+        (int key, slice val, int flag) = pending_invitations.udict_get_min?(256);
+        while (flag) {
+
+            slice address = val~load_msg_addr();
+            int approval_points = val~load_uint(32);
+            int distribution_points = val~load_uint(32);
+
+            cell msg = 
+                begin_cell()
+                    .store_uint(0x10, 6)
+                    .store_slice(address)
+                    .store_coins(30000000) ;; check on tests
+                    .store_uint(0, 107)
+                    .store_ref(
+                        begin_cell()
+                            .store_uint(approval_points, 32)
+                            .store_uint(distribution_points, 32)
+                            .store_uint(0, 32)
+                        .end_cell()
+                    )
+                .end_cell();
+
+            send_raw_message(msg, 0);
+
+            (key, val, flag) = pending_invitations.udict_get_next?(256, key);
+
+            active? = true;
+            
+        }
+
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     
     if (in_msg_body.slice_empty?()) {
         return ();
@@ -419,7 +455,31 @@ global int total_distribution_points; ;;uint32
 
         throw_unless(666, equal_slices(sender_address, root_address));
 
-        ;; Add config immediately or add config later
+        active? = false;
+        root_address = sender_address;
+        deployer_address_sha256 = in_msg_body~load_uint(256);
+        transaction_fee = in_msg_body~load_uint(32);
+        agreement_percent_numerator = 0;
+        agreement_percent_denominator = 0;
+
+        ;; If config added with deploy message
+
+        if (slice_bits(in_msg_body) > 0) {
+
+            agreement_percent_numerator = in_msg_body~load_uint(32);
+            agreement_percent_denominator = in_msg_body~load_uint(32);
+            pending_invitations = in_msg_body~load_dict();
+
+            send_invites_to_routing_pool(pending_invitations);
+
+            pending_transactions = new_dict();
+            authorized_addresses = new_dict();
+            total_approval_points = 0;
+            total_distribution_points = 0;
+
+            active? = true;
+
+        }
 
     }
 
@@ -431,38 +491,7 @@ global int total_distribution_points; ;;uint32
         agreement_percent_denominator = in_msg_body~load_uint(32);
         pending_invitations = in_msg_body~load_dict();
 
-        ;; Send invites to routing pool
-
-        (int key, slice val, int flag) = pending_invitations.udict_get_min?(256);
-        while (flag) {
-
-            slice address = val~load_msg_addr();
-            int approval_points = val~load_uint(32);
-            int distribution_points = val~load_uint(32);
-
-            cell msg = 
-                begin_cell()
-                    .store_uint(0x10, 6)
-                    .store_slice(address)
-                    .store_coins(30000000) ;; check on tests
-                    .store_uint(0, 107)
-                    .store_ref(
-                        begin_cell()
-                            .store_uint(approval_points, 32)
-                            .store_uint(distribution_points, 32)
-                            .store_uint(0, 32)
-                            .store_slice("You are invited to a routing pool. Please accept invitation by sending any response transaction. Please check root address of the routing pool is root.ton")
-                        .end_cell()
-                    )
-                .end_cell();
-
-            send_raw_message(msg, 0);
-
-            (key, val, flag) = pending_invitations.udict_get_next?(256, key);
-
-            active? = true;
-            
-        }
+        send_invites_to_routing_pool(pending_invitations);
 
         save_data();
         return ();
@@ -475,21 +504,22 @@ global int total_distribution_points; ;;uint32
 
 ;; Custom get-methods
 
-(slice, int, int, int, int, cell, cell, cell, int, int) get_routing_pool_data() {
+(int, slice, int, int, int, int, cell, cell, cell, int, int) get_routing_pool_data() {
 
     load_data();
 
     return (
-        root_address,
-        deployer_address_sha256,
-        transaction_fee,
-        agreement_percent_numerator, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
-        agreement_percent_denominator,
-        pending_invitations,
-        pending_transactions,
-        authorized_addresses,
-        total_approval_points, ;; key: uint10 // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
-        total_distribution_points ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+        active?, ;; int1
+        root_address, ;; slice
+        deployer_address_sha256, ;; uint256
+        transaction_fee, ;; uint32
+        agreement_percent_numerator, ;; uint32
+        agreement_percent_denominator, ;; uint32
+        pending_invitations, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+        pending_transactions, ;; key: uint10 // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
+        authorized_addresses, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+        total_approval_points, ;; uint32
+        total_distribution_points ;; uint32
     );
 
 }

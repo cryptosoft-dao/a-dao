@@ -1,6 +1,10 @@
 #include "imports/stdlib.fc";
 
-;; Op codes
+;; Internal operation codes
+
+const int op::change_root_owner = 0;
+
+;; External operation codes
 
 const int op::process_deploy_message = 0;
 
@@ -52,6 +56,7 @@ cell calculate_routing_pool_initial_state(
     ) {
   cell routing_pool_data = 
     begin_cell()
+        .store_int(0, 1) ;; int1 active?
         .store_slice(my_address()) ;; slice root_address
         .store_uint(deployer_address_sha256, 256)
     .end_cell();
@@ -77,10 +82,6 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
 
     throw_unless(666, msg_value < next_routing_pool_creation_fee);
 
-    if (in_msg_body.slice_empty?()) {
-        return ();
-    }
-
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
@@ -89,34 +90,48 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
         return ();
     }
 
-    int op = in_msg_body~load_uint(32);
-
     load_data();
 
-    ;; Deploy routing pool
+    if (in_msg_body.slice_empty?()) {
 
-    cell routing_pool_initial_state = calculate_routing_pool_initial_state(slice_hash(sender_address), routing_pool_code);
-    slice routing_pool_address = calculate_routing_pool_address(routing_pool_initial_state);
+        throw_unless(666, msg_value < next_routing_pool_creation_fee);
 
-    int max_authorized_addresses = in_msg_body~load_uint(8);
-    int agreement_percent = in_msg_body~load_uint(8);
-    cell routing_pool_invitations = in_msg_body~load_dict();
-    
-    cell message = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(routing_pool_address)
-        .store_coins(next_routing_pool_creation_fee)
-        .store_uint(7, 108)
-        .store_ref(routing_pool_initial_state)
-        .store_ref(
-            begin_cell()
-                .store_uint(op::process_deploy_message, 32)
-                .store_uint(next_routing_pool_transaction_fee, 32)
-            .end_cell()
-        )
-    .end_cell();
+        ;; Deploy routing pool
 
-    send_raw_message(message, 0);
+        cell routing_pool_initial_state = calculate_routing_pool_initial_state(slice_hash(sender_address), routing_pool_code);
+        slice routing_pool_address = calculate_routing_pool_address(routing_pool_initial_state);
+        
+        cell message = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(routing_pool_address)
+            .store_coins(next_routing_pool_creation_fee)
+            .store_uint(7, 108)
+            .store_ref(routing_pool_initial_state)
+            .store_ref(
+                begin_cell()
+                    .store_uint(op::process_deploy_message, 32)
+                    .store_uint(slice_hash(sender_address), 256) ;; slice deployer_address
+                    .store_uint(next_routing_pool_transaction_fee, 32)
+                .end_cell()
+            )
+        .end_cell();
+
+        send_raw_message(message, 0);
+
+        return ();
+        
+    }
+
+    int op = in_msg_body~load_uint(32);
+
+    if (op == op::change_root_owner) {
+
+        throw_unless(666, equal_slices(sender_address, owner_address));
+        owner_address = in_msg_body~load_msg_addr();
+
+        save_data();
+
+    }
 
 }
 
