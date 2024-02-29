@@ -24,14 +24,14 @@ const int max_routing_pool_transaction_fee = 1000000000; ;; amount in nanotons
 
 ;; Storage functions
 
-() load_data() impure inline { 
+() load_data() impure inline {
 
     slice ds = get_data().begin_parse();
     owner_address = ds~load_msg_addr();
     routing_pool_code = ds~load_ref();
     total_routing_pools = ds~load_uint(32);
-    next_routing_pool_creation_fee = ds~load_uint(32);
-    next_routing_pool_transaction_fee = ds~load_uint(32);
+    next_routing_pool_creation_fee = ds~load_coins();
+    next_routing_pool_transaction_fee = ds~load_coins();
     ds.end_parse();
 
 }
@@ -80,8 +80,6 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
 
 () main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
 
-    throw_unless(666, msg_value < next_routing_pool_creation_fee);
-
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
@@ -94,7 +92,11 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
 
     if (in_msg_body.slice_empty?()) {
 
-        throw_unless(666, msg_value < next_routing_pool_creation_fee);
+        if (equal_slices(sender_address, owner_address)) {
+            return ();
+        }
+
+        throw_unless(666, msg_value > next_routing_pool_creation_fee);
 
         ;; Deploy routing pool
 
@@ -104,7 +106,7 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
         cell message = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(routing_pool_address)
-            .store_coins(next_routing_pool_creation_fee)
+            .store_coins(50000000)
             .store_uint(7, 108)
             .store_ref(routing_pool_initial_state)
             .store_ref(
@@ -117,6 +119,8 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
         .end_cell();
 
         send_raw_message(message, 0);
+
+
 
         return ();
         
