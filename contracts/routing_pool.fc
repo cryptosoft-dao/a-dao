@@ -3,33 +3,35 @@
 ;; Operation codes
 
 const int op::process_deploy_message = 0;
-const int op::change_transaction_approval_percent = 1
-const int op::change_transaction_approval_percent = 2;
-const int op::propose_transaction = 3;
-const int op::approve_transaction = 4;
-const int op::quit_routing_pool = 5;
+const int op::activate_routing_pool = 1;
+const int op::propose_transaction = 2;
+const int op::approve_transaction = 3;
+const int op::accept_invitation_to_routing_pool = 5;
+const int op::quit_routing_pool = 6;
 
 ;; Transaction types
 
 const int tt::invite_address = 0;
-const int tt::exclude_address = 1;
+const int tt::delete_address = 1;
 const int tt::distribute_ton = 2;
 const int tt::arbitrary_transaction = 3;
-const int tt::change_transaction_approval_percent = 4;
+const int tt::update_agreement_percent = 4;
 
 ;; Storage globals
 
+global int active?;
 global slice root_address; ;; slice 257bits ;; initial state
-global slice deployer_address_256; ;; slice 257bits ;; initial state
-global int transaction_fee;
-global int transaction_approval_percent; ;; int8 ;; on activation
-global cell pending_invitations; ;; on activation
-;; dict authorized_addresses
+global int deployer_address_sha256; ;; slice 257bits ;; initial state
+global int transaction_fee; ;; uint32
+global int agreement_percent_numerator; ;; int32 ;; on activation
+global int agreement_percent_denominator; ;; int32 ;; on activation
+;; dict pending_invitations
     ;; Key: uint256 address_sha256_hash
-    ;; Value (cell)
+    ;; Value
         ;; slice address
         ;; int32 approval_points
         ;; int32 distribution_points
+global cell pending_invitations; ;; on activation
 ;; dict pending_transactions
     ;; Key: uint256 address_sha256_hash
     ;; Value (cell)
@@ -39,17 +41,15 @@ global cell pending_invitations; ;; on activation
         ;; cell approves
         ;; int32 approve_points
 global cell pending_transactions;
-;; dict pending_invitations
-    ;; Key:
-    ;; Value
-    ;; int transaction_type
-    ;; int deadline
-    ;; cell transaction_info
-    ;; cell approves
-    ;; int approve_points
-global int authorized_addresses;
-global int total_approval_points;
-global int total_distribution_points;
+;; dict authorized_addresses
+    ;; Key: uint256 address_sha256_hash
+    ;; Value (cell)
+        ;; slice address
+        ;; int32 approval_points
+        ;; int32 distribution_points
+global cell authorized_addresses;
+global int total_approval_points; ;; uint32
+global int total_distribution_points; ;;uint32
 
 ;; Storage functions
 
@@ -57,11 +57,15 @@ global int total_distribution_points;
 
     slice ds = get_data().begin_parse();
         root_address = ds~load_msg_addr();
-        deployer_address = ds~load_msg_addr();
-        config = ds~load_ref();
-        fees_info = ds~load_ref();
-        referral_program = ds~load_ref();
-        fees_info = ds~load_ref();
+        deployer_address_sha256 = ds~load_uint(256);
+        transaction_fee = ds~load_uint(32);
+        agreement_percent_numerator = ds~load_uint(32);
+        agreement_percent_denominator = ds~load_uint(32);
+        pending_invitations = ds~load_dict();
+        pending_transactions = ds~load_dict();
+        authorized_addresses = ds~load_dict();
+        total_approval_points = ds~load_uint(32);
+        total_distribution_points = ds~load_uint(32);
     ds.end_parse();
 }
 
@@ -69,57 +73,21 @@ global int total_distribution_points;
 
     set_data(
         begin_cell()
-            .store_slice(deployer_address)
-            .store_uint(max_authorized_addresses, 8)
-            .store_uint(transaction_approval_percent, 8)
+            .store_slice(root_address)
+            .store_uint(deployer_address_sha256, 256)
+            .store_uint(transaction_fee, 32)
+            .store_uint(agreement_percent_numerator, 32)
+            .store_uint(agreement_percent_denominator, 32)
+            .store_dict(pending_invitations)
+            .store_dict(pending_transactions)
             .store_dict(authorized_addresses)
             .store_uint(total_approval_points, 32)
             .store_uint(total_distribution_points, 32)
-            .store_dict(pending_transactions)
-            .store_dict(pending_invitations)
         .end_cell()
     );
 }
 
-;; Cell-parsing functions
-
-() parse_config(cell config) impure {
-    config_cs = config.begin_parse();
-    max_authorized_addresses = config_cs~load_int(8);
-    transaction_approval_percent = config_cs~load_int(8);
-    max_pending_transactions = config_cs~load_int(8);
-    max_pending_invitations = config_cs~load_int(8);
-}
-
-() parse_fees_info(cell fees_info) impure {
-    fees_info_cs = fees_info.begin_parse();
-    creation_blockchain_fee = fees_info_cs~load_uint(32);
-    creation_protocol_fee = fees_info_cs~load_uint(32);
-    transaction_blockchain_fee = fees_info_cs~load_uint(32);
-    transaction_protocol_fee = fees_info_cs~load_uint(32);
-}
-
-() parse_refferal_program(cell refferal_program) impure {
-    fees_info_cs = refferal_program.begin_parse();
-    max_referal_level = fees_info_cs~load_uint(3);
-    creation_fee_discount_numerator = fees_info_cs~load_uint(32);
-    creation_fee_discount_denominator = fees_info_cs~load_uint(32);
-    transaction_fee_discount_numerator = fees_info_cs~load_uint(32);
-    transaction_fee_discount_denominator = fees_info_cs~load_uint(32);
-}
-
-() parse_main(cell main_data) impure {
-    cs = main_data.begin_parse();
-    return (
-        cs~load_dict(), ;; dict authorized_addresses
-        cs~load_uint(), ;; uint32 total_approval_points
-        cs~load_uint(), ;; uint32 total_distribution_points
-        cs~load_dict(), ;; dict pending_transactions
-        cs~load_dict() ;; dict pending_invitations
-    );
-}
-
-() clear_pending_transactions_queue() inline {
+() clear_pending_transactions_queue(cell pending_transactions) inline {
 
     (int key, slice value, int success?) = pending_transactions.udict_get_min?(256);
 
@@ -129,19 +97,7 @@ global int total_distribution_points;
         value~skip_bits(8); ;; skip transaction_type
         value~load_uint(32); ;; deadline
     }
-}
 
-() add_cached_transaction() inline {
-
-    (int key, slice value, int success?) = udict_get_max?(pending_transactions, 64);
-
-    if (key = 255) {
-        clear_pending_transactions_queue(pending_transactions);
-    }
-
-    if (success?) {
-        pending_transactions~udict_add?(64, key + 1, cached_transaction);
-    }
 }
 
 (int) check_authority(slice sender_address, int address_index) inline {
@@ -210,13 +166,7 @@ global int total_distribution_points;
 
         int new_approve_points = approve_points + approval_points;
 
-        ;; Parse settings
-
-        slice settings_cs = settings.begin_parse();
-        int max_authorized_addresses = settings_cs~load_uint(8); ;; skip 
-        int agreement_percent = settings_cs~load_uint(8);
-
-        int approves_for_approval = agreement_percent / total_credits * 100;
+        int approves_for_approval = total_approval_points / agreement_percent_denominator * agreement_percent_numerator;
 
         ;; Do pending_transactions in case of approval, otherwise save approve
 
@@ -226,7 +176,7 @@ global int total_distribution_points;
 
             ;; Do pending_transactions
 
-            if (transaction_type == tt::add_address) {
+            if (transaction_type == tt::invite_address) {
 
                 (int last_address_index, _, _) = pending_transactions.udict_get_max?(8);
                 int new_address_index = last_address_index + 1;
@@ -237,13 +187,11 @@ global int total_distribution_points;
 
                 ;; Add new address to dict
 
-                if (new_address_index < max_authorized_addresses) {
-                    authorized_addresses~udict_add?(8, new_address_index, transaction_info_cs);
-                }
+                authorized_addresses~udict_add?(8, new_address_index, transaction_info_cs);
 
                 ;; Increase total approves
 
-                total_credits += approval_points;
+                total_approval_points += approval_points;
 
                 save_data();
                 return ();
@@ -260,14 +208,14 @@ global int total_distribution_points;
 
                 ;; Decrease total approves
 
-                total_credits -= approval_points;
+                total_approval_points -= approval_points;
 
                 save_data();
                 return ();
 
             }
 
-            if (transaction_type == tt::withdraw_ton) {
+            if (transaction_type == tt::distribute_ton) {
 
                 int ton_to_route = transaction_info_cs~load_uint(32); ;; int amount
 
@@ -281,12 +229,12 @@ global int total_distribution_points;
                     int approval_points = address_info~load_uint(32);
                     int distribution_points = address_info~load_uint(32);
 
-                    int address_ton = ton_to_route / total_credits * approval_points;
+                    int ton_amount_to_address = ton_to_route / total_distribution_points * distribution_points;
                 
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
                         .store_slice(address)
-                        .store_coins(address_ton)
+                        .store_coins(ton_amount_to_address)
                         .store_uint(0, 107)
                         .end_cell();
                     send_raw_message(msg, 0);
@@ -319,9 +267,10 @@ global int total_distribution_points;
 
             }
 
-            if (transaction_type == tt::set_up) {
+            if (transaction_type == tt::update_agreement_percent) {
 
-                settings = transaction_info_cs~load_ref(); ;; parse and save new settings
+                agreement_percent_numerator = transaction_info_cs~load_uint(32); ;; parse and save new settings
+                agreement_percent_denominator = transaction_info_cs~load_uint(32);
 
                 save_data();
                 return ();
@@ -363,7 +312,7 @@ global int total_distribution_points;
         ;; Index 0: Add address
         ;; transaction_info: slice address_to_add_addr
 
-        if (transaction_type == tt::add_address) {
+        if (transaction_type == tt::invite_address) {
 
             ;; Check transaction_info for initiating adding address
 
@@ -371,7 +320,7 @@ global int total_distribution_points;
             transaction_info_cs~load_uint(32); ;; int approval_points
             transaction_info_cs~load_uint(32); ;; int distribution_points
 
-            add_cached_transaction(pending_transactions, transaction_cell);
+            pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
             save_data();
             return ();
@@ -387,7 +336,7 @@ global int total_distribution_points;
 
             transaction_info_cs~load_msg_addr(); ;; slice address_to_eliminate_addr
 
-            add_cached_transaction(pending_transactions, transaction_cell);
+            pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
             save_data();
             return ();
@@ -397,13 +346,13 @@ global int total_distribution_points;
         ;; Index 2: ton routing transaction
         ;; transaction_info: int amount
 
-        if (transaction_type == tt::withdraw_ton) {
+        if (transaction_type == tt::distribute_ton) {
 
             ;; Check transaction_info for initiating ton routing
 
             transaction_info_cs~load_uint(32); ;; int amount
 
-            add_cached_transaction(pending_transactions, transaction_cell);
+            pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
             save_data();
             return ();
@@ -413,15 +362,15 @@ global int total_distribution_points;
         ;; Index 3: Arbitrary transtransaction
         ;; transaction_info: slice destination, int amount, cell msg_body
 
-        if (transaction_type == tt::random_transaction) {
+        if (transaction_type == tt::arbitrary_transaction) {
 
-            ;; Check transaction_info for initiating arbitrary transtransaction
+            ;; Check transaction_info for proposing arbitrary transtransaction
 
             transaction_info_cs~load_msg_addr(); ;; destination
             transaction_info_cs~load_uint(32); ;; amount
             transaction_info_cs~load_ref(); ;; msg_body
 
-            add_cached_transaction(pending_transactions, transaction_cell);
+            pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
             save_data();
             return ();
@@ -431,13 +380,14 @@ global int total_distribution_points;
         ;; Index 4: start change settings
         ;; transaction_info: 
 
-        if (transaction_type == tt::set_up) {
+        if (transaction_type == tt::update_agreement_percent) {
 
-            ;; Check transaction_info for changing settings
+            ;; Check transaction_info for proposing of changing of transaction approval percent
 
-            transaction_info_cs~load_uint(8); ;; agreement_percent
+            agreement_percent_numerator = transaction_info_cs~load_uint(32); ;; agreement_percent_numerator
+            agreement_percent_denominator = transaction_info_cs~load_uint(32); ;; agreement_percent_denominator
 
-            add_cached_transaction(pending_transactions, transaction_cell);
+            pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
             save_data();
             return ();
@@ -450,7 +400,7 @@ global int total_distribution_points;
 
     }
 
-    if (op == op::quit_contract) {
+    if (op == op::quit_routing_pool) {
 
         ;; Check if sender is an authorized routing pool wallet
 
@@ -465,9 +415,9 @@ global int total_distribution_points;
 
     }
 
-    if (op == process_deploy_message) {
+    if (op == op::process_deploy_message) {
 
-        throw_unless(666, sender_address == root_address);
+        throw_unless(666, equal_slices(sender_address, root_address));
 
         ;; Add config immediately or add config later
 
@@ -475,32 +425,47 @@ global int total_distribution_points;
 
     if (op == op::activate_routing_pool) {
 
-        throw_unless(333, equal_slices?(sender_address, routing_pool_of_routing_pools_addr))
-        throw_unless(666, get_data().begin_parse().slice_empty());
+        throw_unless(333, equal_slices(sender_address, root_address));
 
-        max_authorized_addresses = in_msg_body~load_uint(8);
-        transaction_approval_percent = in_msg_body~load_uint(8);
-
-        approval_points = in_msg_body~load_uint(8);
-        distribution_points = in_msg_body~load_uint(8);
-
-        max_authorized_addresses = in_msg_body~load_uint(8);
-        agreement_percent = in_msg_body~load_uint(8);
-        authorized_addresses = new_dict();
-
-        total_approval_points = 0;
-        total_distribution_points = 0;
-        pending_transactions = new_dict();
-        pending_invitations = 
+        agreement_percent_numerator = in_msg_body~load_uint(32);
+        agreement_percent_denominator = in_msg_body~load_uint(32);
+        pending_invitations = in_msg_body~load_dict();
 
         ;; Send invites to routing pool
 
+        (int key, slice val, int flag) = pending_invitations.udict_get_min?(256);
+        while (flag) {
+
+            slice address = val~load_msg_addr();
+            int approval_points = val~load_uint(32);
+            int distribution_points = val~load_uint(32);
+
+            cell msg = 
+                begin_cell()
+                    .store_uint(0x10, 6)
+                    .store_slice(address)
+                    .store_coins(30000000) ;; check on tests
+                    .store_uint(0, 107)
+                    .store_ref(
+                        begin_cell()
+                            .store_uint(approval_points, 32)
+                            .store_uint(distribution_points, 32)
+                            .store_uint(0, 32)
+                            .store_slice("You are invited to a routing pool. Please accept invitation by sending any response transaction. Please check root address of the routing pool is root.ton")
+                        .end_cell()
+                    )
+                .end_cell();
+
+            send_raw_message(msg, 0);
+
+            (key, val, flag) = pending_invitations.udict_get_next?(256, key);
+
+            active? = true;
+            
+        }
+
         save_data();
         return ();
-
-    }
-
-    if (op == op::update_approval_percent) {
 
     }
 
@@ -510,19 +475,21 @@ global int total_distribution_points;
 
 ;; Custom get-methods
 
-() get_routing_pool_data() {
+(slice, int, int, int, int, cell, cell, cell, int, int) get_routing_pool_data() {
 
     load_data();
 
     return (
+        root_address,
         deployer_address_sha256,
-        max_authorized_addresses,
-        transaction_approval_percent,
-        authorized_addresses, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
-        total_approval_points,
-        total_distribution_points,
-        pending_transactions, ;; key: int address_sha256_hash // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
-        pending_invitations, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+        transaction_fee,
+        agreement_percent_numerator, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
+        agreement_percent_denominator,
+        pending_invitations,
+        pending_transactions,
+        authorized_addresses,
+        total_approval_points, ;; key: uint10 // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
+        total_distribution_points ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int distribution_points
     );
 
 }
@@ -530,6 +497,6 @@ global int total_distribution_points;
 ;; NFT Get-Methods
 
 (int, int, slice, slice, cell) get_nft_data() method_id {
-  (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();
-  return (init?, index, collection_address, owner_address, content);
+  load_data();
+  return (active?, deployer_address_sha256, root_address, begin_cell().end_cell().begin_parse(), begin_cell().end_cell());
 }
