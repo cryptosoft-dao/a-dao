@@ -56,14 +56,16 @@ cell calculate_routing_pool_initial_state(
     ) {
   cell routing_pool_data = 
     begin_cell()
-        .store_int(0, 1) ;; int1 active?
+        .store_uint(0, 1) ;; int1 active?
         .store_slice(my_address()) ;; slice root_address
         .store_uint(deployer_address_sha256, 256)
     .end_cell();
   return (
     begin_cell()
+        .store_uint(0, 2)
         .store_dict(routing_pool_code)
         .store_dict(routing_pool_data)
+        .store_uint(0, 1)
     .end_cell()
   );
 }
@@ -92,17 +94,13 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
 
     if (in_msg_body.slice_empty?()) {
 
-        if (equal_slices(sender_address, owner_address)) {
-            return ();
-        }
-
         throw_unless(666, msg_value > next_routing_pool_creation_fee);
 
         ;; Deploy routing pool
 
-        cell routing_pool_initial_state = calculate_routing_pool_initial_state(slice_hash(sender_address), routing_pool_code);
+        cell routing_pool_initial_state = calculate_routing_pool_initial_state(cell_hash(begin_cell().store_slice(sender_address).end_cell()), routing_pool_code);
         slice routing_pool_address = calculate_routing_pool_address(routing_pool_initial_state);
-        
+
         cell message = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(routing_pool_address)
@@ -112,15 +110,12 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
             .store_ref(
                 begin_cell()
                     .store_uint(op::process_deploy_message, 32)
-                    .store_uint(slice_hash(sender_address), 256) ;; slice deployer_address
                     .store_uint(next_routing_pool_transaction_fee, 32)
                 .end_cell()
             )
         .end_cell();
 
         send_raw_message(message, 0);
-
-
 
         return ();
         
@@ -149,6 +144,16 @@ slice calculate_routing_pool_address(cell routing_pool_initial_state) {
     return next_routing_pool_creation_fee;
 }
 
+(int) get_next_routing_pool_index() method_id {
+    return total_routing_pools + 1;
+}
+
+slice get_routing_pool_address_by_deployer_address_sha256(int deployer_address_sha256) method_id {
+    load_data();
+    cell routing_pool_initial_state = calculate_routing_pool_initial_state(deployer_address_sha256, routing_pool_code);
+    return calculate_routing_pool_address(routing_pool_initial_state);
+}
+
 ;; Collection get-methods
 
 (int, cell, slice) get_collection_data() method_id {
@@ -174,16 +179,4 @@ cell get_nft_content(int index, cell individual_nft_content) method_id {
                       .store_slice(begin_cell().end_cell().begin_parse())
                       .store_ref(begin_cell().end_cell())
           .end_cell());
-}
-
-;; Draft
-
-(int) get_next_routing_pool_index() method_id {
-    return total_routing_pools + 1;
-}
-
-slice get_routing_pool_address_by_deployer_address_sha256(int deployer_address_sha256) method_id {
-    load_data();
-    cell routing_pool_initial_state = calculate_routing_pool_initial_state(deployer_address_sha256, routing_pool_code);
-    return calculate_routing_pool_address(routing_pool_initial_state);
 }

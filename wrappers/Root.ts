@@ -11,6 +11,7 @@ import {
     toNano 
 } from '@ton/core';
 import { RootOperationCodes, RoutingPoolOperationCodes, RoutingPoolTransactionTypes } from '../wrappers/Config';
+import { RoutingPool } from './RoutingPool';
 
 export type RootConfig = {
     OwnerAddress: Address;
@@ -19,6 +20,7 @@ export type RootConfig = {
     NextRoutingPoolCreationFee: number | bigint;
     NextRoutingPoolTransactionFee: number | bigint;
 }
+
 export function serializeRootConfigToCell(config: RootConfig): Cell {
     return beginCell()
         .storeAddress(config.OwnerAddress)
@@ -52,32 +54,20 @@ export class Root implements Contract {
         });
     }
 
-    async sendCreateRoutingPool(
+    async sendDeployRoutingPool(
         provider: ContractProvider, 
         via: Sender,
         value: bigint,
-        opts: {
-            DeployerAddress: Address;
-            MaxAuthorizedAddresses: number | bigint;
-            TransactionApprovalPercent: number | bigint;
-            AuthorizedAddresses: Dictionary<bigint, Cell>;
-            TotalApprovalPoints: number | bigint;
-            TotalDistributionPoints: number | bigint;
-        }
     ) {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeAddress(opts.DeployerAddress)
-                    .storeUint(opts.MaxAuthorizedAddresses, 8)
-                    .storeUint(opts.TransactionApprovalPercent, 8)
-                    .storeDict(opts.AuthorizedAddresses)
-                    .storeUint(opts.TotalApprovalPoints, 32)
-                    .storeUint(opts.TotalDistributionPoints, 32)
-                .endCell()
         });
+    }
+
+    async getRoutingPoolAddressByDeployerAddressSha256(provider: ContractProvider, deployer_address_sha256: bigint): Promise<Address> {
+        const result = await provider.get('get_routing_pool_address_by_deployer_address_sha256', [{ type: 'int', value: deployer_address_sha256 }]);
+        return result.stack.readAddress();
     }
 
 }

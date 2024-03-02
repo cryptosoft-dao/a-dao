@@ -56,8 +56,16 @@ global int total_distribution_points; ;;uint32
 () load_data() impure inline { 
 
     slice ds = get_data().begin_parse();
-        root_address = ds~load_msg_addr();
-        deployer_address_sha256 = ds~load_uint(256);
+    active? = ds~load_uint(1);
+    root_address = ds~load_msg_addr();
+    deployer_address_sha256 = ds~load_uint(256);
+
+    if (active? == false) {
+
+        ds.end_parse();
+
+    } else {
+
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
         agreement_percent_denominator = ds~load_uint(32);
@@ -66,7 +74,10 @@ global int total_distribution_points; ;;uint32
         authorized_addresses = ds~load_dict();
         total_approval_points = ds~load_uint(32);
         total_distribution_points = ds~load_uint(32);
-    ds.end_parse();
+        ds.end_parse();
+
+    }
+
 }
 
 () save_data() impure inline {
@@ -454,17 +465,11 @@ global int total_distribution_points; ;;uint32
     if (op == op::process_deploy_message) {
 
         throw_unless(666, equal_slices(sender_address, root_address));
-
-        active? = false;
-        root_address = sender_address;
-        deployer_address_sha256 = in_msg_body~load_uint(256);
         transaction_fee = in_msg_body~load_uint(32);
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
 
-        ;; If config added with deploy message
-
-        if (slice_bits(in_msg_body) > 0) {
+        if (slice_bits(in_msg_body) > 0) { ;; If config added with deploy message
 
             agreement_percent_numerator = in_msg_body~load_uint(32);
             agreement_percent_denominator = in_msg_body~load_uint(32);
@@ -472,14 +477,18 @@ global int total_distribution_points; ;;uint32
 
             send_invites_to_routing_pool(pending_invitations);
 
-            pending_transactions = new_dict();
-            authorized_addresses = new_dict();
-            total_approval_points = 0;
-            total_distribution_points = 0;
-
-            active? = true;
-
         }
+
+        pending_transactions = new_dict();
+        authorized_addresses = new_dict();
+        total_approval_points = 0;
+        total_distribution_points = 0;
+
+        active? = true;
+
+        save_data();
+
+        return();
 
     }
 

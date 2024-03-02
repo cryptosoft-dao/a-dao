@@ -1,4 +1,4 @@
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Blockchain, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
 import { Address, beginCell, Cell, Dictionary, toNano, TransactionDescriptionGeneric } from '@ton/core';
 import { buildAdminContent, buildOrderContent, buildResponseContent, buildUserContent } from './utils/buildContent';
 import { Root } from '../wrappers/Root';
@@ -6,6 +6,7 @@ import { RoutingPool } from '../wrappers/RoutingPool';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { RootOperationCodes, RoutingPoolOperationCodes, RoutingPoolTransactionTypes } from '../wrappers/Config';
+import { sha256Hash } from './utils/Helpers';
 
 describe('Root', () => {
 
@@ -35,7 +36,7 @@ describe('Root', () => {
         blockchain = await Blockchain.create();
         blockchain.now = blockchainStartTime;
 
-        Deployer = await blockchain.treasury('Deployer')
+        Deployer = await blockchain.treasury('Deployer');
         Wallet0 = await blockchain.treasury('Wallet0');
         Wallet1 = await blockchain.treasury('Wallet1');
         Wallet2 = await blockchain.treasury('Wallet2');
@@ -58,10 +59,10 @@ describe('Root', () => {
             ),
         );
 
-        blockchain.setVerbosityForAddress(root.address, {
+        /* blockchain.setVerbosityForAddress(root.address, {
             blockchainLogs: true,
             vmLogs: 'vm_logs_full'
-        })
+        }) */
 
         const rootDeployResult = await root.sendDeploy(Deployer.getSender(), toNano('10.777'));
 
@@ -70,7 +71,42 @@ describe('Root', () => {
             to: root.address,
             deploy: true,
             success: true,
-        });     
+        });
+
+        const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
+        const firstRoutingPoolAddresss = await root.getRoutingPoolAddressByDeployerAddressSha256(bufferToBigInt(beginCell().storeAddress(Deployer.address).endCell().hash()));
+
+        console.log(firstRoutingPoolAddresss);
+
+        expect(rootDeployResult.transactions).toHaveTransaction({
+            from: root.address,
+            to: firstRoutingPoolAddresss,
+            deploy: true,
+            success: true,
+        });
+
+        printTransactionFees(rootDeployResult.transactions);
+
+        /*
+
+        const deployRoutingPoolResult = await root.sendDeployRoutingPool(Wallet0.getSender(), toNano('10.777'));
+
+        expect(deployRoutingPoolResult.transactions).toHaveTransaction({
+            from: Wallet0.address,
+            to: root.address,
+        });
+
+        expect(deployRoutingPoolResult.transactions).toHaveTransaction({
+            from: root.address,
+            to: root.address,
+        });
+
+        expect(deployRoutingPoolResult.transactions).toHaveTransaction({
+            from: Wallet0.address,
+            to: root.address,
+        });
+
+        */
 
     });
 
