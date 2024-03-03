@@ -1,0 +1,6 @@
+[submodule "contracts/a-careers-smc"]
+	path = contracts/a-careers-smc
+	url = https://github.com/the-real-some-dao/a-careers-smc.git
+[submodule "contracts/jetton_dao"]
+	path = contracts/jetton_dao
+	url = https://github.com/EmelyanenkoK/jetton_dao.git
