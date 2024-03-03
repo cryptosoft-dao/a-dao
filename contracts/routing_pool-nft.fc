@@ -13,18 +13,21 @@ const int op::quit_routing_pool = 5;
 
 const int tt::invite_address = 0;
 const int tt::delete_address = 1;
-const int tt::distribute_ton = 2;
-const int tt::arbitrary_transaction = 3;
-const int tt::update_agreement_percent = 4;
+const int tt::distribute_ton = 3;
+const int tt::arbitrary_transaction = 4;
+const int tt::update_agreement_percent = 5;
 
 ;; Storage globals
 
-global int active?;
+global int active?; ;; uint1
 global slice root_address; ;; slice 257bits ;; initial state
-global int deployer_address_sha256; ;; slice 257bits ;; initial state
+global int deployer_address; ;; slice 257bits ;; initial state
 global int transaction_fee; ;; uint32
 global int agreement_percent_numerator; ;; int32 ;; on activation
 global int agreement_percent_denominator; ;; int32 ;; on activation
+global int profit_reserve_percent_numerator;
+global int profit_reserve_percent_denominator;
+global cell profitable_addresses;
 ;; dict pending_invitations
     ;; Key: uint256 address_sha256_hash
     ;; Value
@@ -50,6 +53,7 @@ global cell pending_transactions;
 global cell authorized_addresses;
 global int total_approval_points; ;; uint32
 global int total_distribution_points; ;;uint32
+global int total_profit_reserved;
 
 ;; Storage functions
 
@@ -292,21 +296,47 @@ global int total_distribution_points; ;;uint32
 
             }
 
+            ;; Send transaction to dApp for profit withdrawal
+
+            if (transaction_type = tt::withdraw_profit) {
+
+                slice profitable_address = transaction_info_cs~load_msg_addr();
+
+                var msg = begin_cell()
+                    .store_uint(0x18, 6)
+                    .store_slice(profitable_address)
+                    .store_coins(330000000)
+                    .store_uint(1, 107)
+                    .store_ref(
+                        begin_cell()
+                            .store_uint(48, 32) ;; int32 op::withdraw_funds
+                        .end_cell()
+                    )
+                .end_cell();
+
+                send_raw_message(msg, 0);
+
+            }
+
             if (transaction_type == tt::arbitrary_transaction) {
 
                 slice destination = transaction_info_cs~load_msg_addr(); ;; destination
                 int amount = transaction_info_cs~load_uint(32); ;; amount
                 cell msg_body = transaction_info_cs~load_ref(); ;; msg_body
 
+                throw_if(666, amount > my_balance - total_profit_reserved);
+
                 ;; Arbitrary transtransaction
 
-                var msg = begin_cell()
+                var msg = 
+                    begin_cell()
                         .store_uint(0x18, 6)
                         .store_slice(destination)
                         .store_coins(amount)
                         .store_uint(1, 107)
                         .store_ref(msg_body)
                     .end_cell();
+
                 send_raw_message(msg, 0);
 
                 save_data();
@@ -409,6 +439,8 @@ global int total_distribution_points; ;;uint32
         ;; Index 3: Arbitrary transtransaction
         ;; transaction_info: slice destination, int amount, cell msg_body
 
+        ;; !!!!!! rework
+
         if (transaction_type == tt::arbitrary_transaction) {
 
             ;; Check transaction_info for proposing arbitrary transtransaction
@@ -416,6 +448,8 @@ global int total_distribution_points; ;;uint32
             transaction_info_cs~load_msg_addr(); ;; destination
             transaction_info_cs~load_uint(32); ;; amount
             transaction_info_cs~load_ref(); ;; msg_body
+
+            throw_
 
             pending_transactions.udict_add?(10, transaction_index, transaction_cell.begin_parse());
 
@@ -460,6 +494,10 @@ global int total_distribution_points; ;;uint32
         save_data();
         return ();
 
+    }
+
+    if (op == op::transfer_points) {
+        
     }
 
     if (op == op::process_deploy_message) {
@@ -520,7 +558,7 @@ global int total_distribution_points; ;;uint32
     return (
         active?, ;; int1
         root_address, ;; slice
-        deployer_address_sha256, ;; uint256
+        deployer_address, ;; uint256
         transaction_fee, ;; uint32
         agreement_percent_numerator, ;; uint32
         agreement_percent_denominator, ;; uint32

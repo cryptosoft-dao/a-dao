@@ -59,10 +59,14 @@ describe('Root', () => {
             ),
         );
 
-        /* blockchain.setVerbosityForAddress(root.address, {
+        /* 
+        
+        blockchain.setVerbosityForAddress(root.address, {
             blockchainLogs: true,
             vmLogs: 'vm_logs_full'
-        }) */
+        }) 
+        
+        */
 
         const rootDeployResult = await root.sendDeploy(Deployer.getSender(), toNano('10.777'));
 
@@ -74,7 +78,7 @@ describe('Root', () => {
         });
 
         const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
-        const firstRoutingPoolAddresss = await root.getRoutingPoolAddressByDeployerAddressSha256(bufferToBigInt(beginCell().storeAddress(Deployer.address).endCell().hash()));
+        const firstRoutingPoolAddresss = await root.getNFTAddressByIndex(Deployer.address);
 
         console.log(firstRoutingPoolAddresss);
 

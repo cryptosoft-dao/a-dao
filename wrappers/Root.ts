@@ -8,6 +8,7 @@ import {
     Dictionary, 
     Sender, 
     SendMode, 
+    Slice, 
     toNano 
 } from '@ton/core';
 import { RootOperationCodes, RoutingPoolOperationCodes, RoutingPoolTransactionTypes } from '../wrappers/Config';
@@ -65,8 +66,8 @@ export class Root implements Contract {
         });
     }
 
-    async getRoutingPoolAddressByDeployerAddressSha256(provider: ContractProvider, deployer_address_sha256: bigint): Promise<Address> {
-        const result = await provider.get('get_routing_pool_address_by_deployer_address_sha256', [{ type: 'int', value: deployer_address_sha256 }]);
+    async getNFTAddressByIndex(provider: ContractProvider, index: bigint): Promise<Address> {
+        const result = await provider.get('get_routing_pool_address_by_deployer_address', [{ type: 'slice', cell: deployer_address }]);
         return result.stack.readAddress();
     }
 
