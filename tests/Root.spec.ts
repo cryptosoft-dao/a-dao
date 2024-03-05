@@ -1,12 +1,9 @@
 import { Blockchain, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
 import { Address, beginCell, Cell, Dictionary, toNano, TransactionDescriptionGeneric } from '@ton/core';
-import { buildAdminContent, buildOrderContent, buildResponseContent, buildUserContent } from './utils/buildContent';
 import { Root } from '../wrappers/Root';
 import { RoutingPool } from '../wrappers/RoutingPool';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
-import { RootOperationCodes, RoutingPoolOperationCodes, RoutingPoolTransactionTypes } from '../wrappers/Config';
-import { sha256Hash } from './utils/Helpers';
 
 describe('Root', () => {
 

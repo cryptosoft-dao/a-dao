@@ -1,0 +1,3 @@
+const int next_routing_pool_creation_fee_discount = 10000; ;; amount in nanotons
+const int next_routing_pool_transaction_fee_increase = 1000000; ;; amount in nanotons
+const int max_routing_pool_transaction_fee = 1000000000; ;; amount in nanotons

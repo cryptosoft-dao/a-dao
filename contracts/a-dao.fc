@@ -1,21 +1,4 @@
-#include "imports/stdlib.fc";
-
-;; Operation codes
-
-const int op::process_deploy_message = 0;
-const int op::activate_routing_pool = 1;
-const int op::propose_transaction = 2;
-const int op::approve_transaction = 3;
-const int op::accept_invitation_to_routing_pool = 4;
-const int op::quit_routing_pool = 5;
-
-;; Transaction types
-
-const int tt::invite_address = 0;
-const int tt::delete_address = 1;
-const int tt::distribute_ton = 3;
-const int tt::arbitrary_transaction = 4;
-const int tt::update_agreement_percent = 5;
+#include "stdlib.fc";
 
 ;; Storage globals
 
@@ -354,6 +337,10 @@ global int total_profit_reserved;
 
             }
 
+            if (transaction_type == tt::transfer_points) {
+                
+            }
+
         } else {
 
             approves~udict_add?(8, transaction_index, transaction);
@@ -475,6 +462,10 @@ global int total_profit_reserved;
 
         }
 
+        if (transaction_type == tt::transfer_points) {
+            
+        }
+
     }
 
     if (op == op::accept_invitation_to_routing_pool) {
@@ -494,10 +485,6 @@ global int total_profit_reserved;
         save_data();
         return ();
 
-    }
-
-    if (op == op::transfer_points) {
-        
     }
 
     if (op == op::process_deploy_message) {
