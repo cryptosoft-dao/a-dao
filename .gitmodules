@@ -1,0 +1,6 @@
+[submodule "contracts/a-ico"]
+	path = contracts/a-ico
+	url = https://github.com/the-real-some-dao/a-ico.git
+[submodule "contracts/a-careers-smc"]
+	path = contracts/a-careers-smc
+	url = https://github.com/the-real-some-dao/a-careers-smc.git
