@@ -1,7 +1,12 @@
-const route_revenue = "route_revenue"c;
-const initialize_voting = "initialize_voting"c;
-const initialize_transaction = "initialize_transaction"c;
-const vote = "vote"c;
-const add_member = "add_member"c;
-const eliminate_member = "eliminate_member"c;
-const exit_from_dao = "exit_from_dao"c;
+;; a-dao-minter.fc
+
+    const int op::change_root_owner = 0;
+
+;; a_dao.fc
+
+    const int op::process_deploy_message = 0;
+    const int op::activate_routing_pool = 1;
+    const int op::propose_transaction = 2;
+    const int op::approve_transaction = 3;
+    const int op::accept_invitation_to_routing_pool = 4;
+    const int op::quit_routing_pool = 5;

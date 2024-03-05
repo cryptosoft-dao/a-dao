@@ -1,4 +1,6 @@
 #include "stdlib.fc";
+#include "op.fc"
+#include "transactions_types.fc"
 
 ;; Storage globals
 

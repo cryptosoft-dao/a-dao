@@ -1,0 +1,6 @@
+const int tt::invite_address = 0;
+const int tt::delete_address = 1;
+const int tt::distribute_ton = 3;
+const int tt::arbitrary_transaction = 4;
+const int tt::update_agreement_percent = 5;
+const int tt::transfer_points = 6;
