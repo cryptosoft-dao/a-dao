@@ -1,6 +1,6 @@
 ;; a-dao-minter.fc
 
-    const int op::change_root_owner = 0;
+    const int op::change_a_dao_minter_owner = 0;
 
 ;; a_dao.fc
 

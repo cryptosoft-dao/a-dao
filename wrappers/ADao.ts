@@ -11,12 +11,12 @@ import {
     toNano 
 } from '@ton/core';
 
-export type RoutingPoolConfig = {
+export type ADaoConfig = {
     Active: number;
     RootAddress: Address,
     DeployerAddressSHA256: bigint,
 }
-export function serializeRoutingPoolConfigToCell(config: RoutingPoolConfig): Cell {
+export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     return beginCell()
         .storeUint(config.Active, 1) // false value
         .storeAddress(config.RootAddress)
@@ -24,17 +24,17 @@ export function serializeRoutingPoolConfigToCell(config: RoutingPoolConfig): Cel
     .endCell();
 }
 
-export class RoutingPool implements Contract {
+export class ADao implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
 
     static createFromAddress(address: Address) {
-        return new RoutingPool(address);
+        return new ADao(address);
     }
 
-    static createFromConfig(config: RoutingPoolConfig, code: Cell, workchain = 0) {
-        const data = serializeRoutingPoolConfigToCell(config);
+    static createFromConfig(config: ADaoConfig, code: Cell, workchain = 0) {
+        const data = serializeADaoConfigToCell(config);
         const init = { code, data };
-        return new RoutingPool(contractAddress(workchain, init), init);
+        return new ADao(contractAddress(workchain, init), init);
     }
 
     async sendVoteAddMember(
@@ -245,6 +245,27 @@ export class RoutingPool implements Contract {
                     .storeRef(opts.VotingCell)
                 .endCell()
         });
+    }
+
+    async getADaoData(provider: ContractProvider, deployer_address: Address) {
+        const { stack } = await provider.get('get_a_dao_data', []);
+
+        return (
+            stack.readNumber(),
+            stack.readAddress(),
+            stack.readAddress(),
+            stack.readBigNumber(),
+            stack.readBigNumber(),
+            stack.readBigNumber(),
+            stack.readBigNumber(),
+            stack.readCell(),
+            stack.readCell(),
+            stack.readCell(),
+            stack.readCell(),
+            stack.readBigNumber(),
+            stack.readBigNumber(),
+            stack.readBigNumber()
+        );
     }
 
 }

@@ -1,12 +1,12 @@
-// Root
+// A DAO Minter
 
-export const RootOperationCodes = {
+export const ADaoMinterOperationCodes = {
     ProcessDeployMessage: 0,
 }
 
-// Routing pool
+// A DAO
 
-export const RoutingPoolOperationCodes = {
+export const ADaoOperationCodes = {
     ProcessDeployMessage: 0,
     ActivateRoutingPool: 1,
     ProposeTransaction: 2,
@@ -15,7 +15,7 @@ export const RoutingPoolOperationCodes = {
     QuitRoutingPool: 5,
 };
 
-export const RoutingPoolTransactionTypes = {
+export const ADaoTransactionTypes = {
     InviteAddress: 0,
     DeleteAddress: 1,
     DestributeTon: 2,
