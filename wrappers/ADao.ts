@@ -10,6 +10,8 @@ import {
     SendMode, 
     toNano 
 } from '@ton/core';
+import { ADaoMinterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
+import { Slice } from 'ton-core';
 
 export type ADaoConfig = {
     Active: number;
@@ -37,136 +39,37 @@ export class ADao implements Contract {
         return new ADao(contractAddress(workchain, init), init);
     }
 
-    async sendVoteAddMember(
-        provider: ContractProvider, 
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-        }
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                .endCell()
-        });
-    }
-    
-    async sendVoteTerminateWalletship(
-        provider: ContractProvider, 
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-        }
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                .endCell()
-        });
-    }
+    // Activation
 
-    async sendVoteRouteRevenue(
-        provider: ContractProvider, 
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-        }
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                .endCell()
-        });
-    }
-
-    async sendVoteArbitraryTransaction(
-        provider: ContractProvider, 
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-        }
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                .endCell()
-        });
-    }
-
-    async sendVoteChangeConfig(
-        provider: ContractProvider, 
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-        }
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                .endCell()
-        });
-    }
-
-    async sendInitiateAddMember(
+    async sendActivateRoutingPool (
         provider: ContractProvider,
         via: Sender,
         value: bigint,
         opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-            VotingCell: Cell;
+            AgreementPercentNumerator: bigint | number,
+            AgreementPercentDenominator: bigint | number,
+            ProfitReservePercentNumerator: bigint | number,
+            ProfitReservePercentDenominator: bigint | number,
+            ProfitableAddresses: Dictionary<bigint, Slice>,
+            PendingInvitations: Dictionary<bigint, Slice>,
         }
     ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                    .storeRef(opts.VotingCell)
-                .endCell()
-        });
+
     }
 
-    async sendInitiateTerminateWalletship(
+    // Propose transaction
+
+    async sendProposeInviteAddress(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
         opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-            VotingCell: Cell;
+            TransactionType: bigint | number;
+            Deadline: bigint | number;
+            // cell transaction_info
+            AddressToInvite: Address;
+            ApprovalPoints: bigint | number;
+            ProfitPoints: bigint | number;
         }
     ) {
         await provider.internal(via, {
@@ -174,97 +77,132 @@ export class ADao implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: 
                 beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                    .storeRef(opts.VotingCell)
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.TransactionType, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeUint(ADaoTransactionTypes.InviteAddress, 4)
+                            .storeUint(opts.ApprovalPoints, 32)
+                            .storeUint(opts.ProfitPoints, 32)
+                    )
                 .endCell()
         });
     }
 
-    async sendInitiateRouteRevenue(
-        provider: ContractProvider,
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-            VotingCell: Cell;
-        }
+    async sendProposeDeleteAddress(
+        
     ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                    .storeRef(opts.VotingCell)
-                .endCell()
-        });
+
+    }
+    async sendProposeDistributeTon(
+        
+    ) {
+
     }
 
-    async sendInitiateArbitraryTransaction(
-        provider: ContractProvider,
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-            VotingCell: Cell;
-        }
+    async sendProposeWithdrawProfit(
+        
     ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                    .storeRef(opts.VotingCell)
-                .endCell()
-        });
+
     }
 
-    async sendInitiateChangeConfig(
-        provider: ContractProvider,
-        via: Sender,
-        value: bigint,
-        opts: {
-            MemberIndex: number | bigint;
-            VotingIndex: number | bigint;
-            VotingCell: Cell;
-        }
+    async sendProposeArbitraryTransaction(
+        
     ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: 
-                beginCell()
-                    .storeUint(opts.MemberIndex, 32)
-                    .storeUint(opts.VotingIndex, 32)
-                    .storeRef(opts.VotingCell)
-                .endCell()
-        });
+
     }
+
+    async sendProposeUpdateAgreementPercent(
+        
+    ) {
+
+    }
+
+    async sendProposeTransferPoints(
+        
+    ) {
+
+    }
+
+    // Approve transaction
+
+    async sendApproveInviteAddress(
+
+    ) {
+
+    }
+
+    async sendApproveDeleteAddress(
+        
+    ) {
+
+    }
+    async sendApproveDistributeTon(
+        
+    ) {
+
+    }
+
+    async sendApproveWithdrawProfit(
+        
+    ) {
+
+    }
+
+    async sendApproveArbitraryTransaction(
+        
+    ) {
+
+    }
+
+    async sendApproveUpdateAgreementPercent(
+        
+    ) {
+
+    }
+
+    async sendApproveTransferPoints(
+        
+    ) {
+
+    }
+
+    // General
+
+    async sendAcceptInvitationToRoutingPool(
+        
+    ) {
+
+    }
+
+    async sendQuitRoutingPool(
+        
+    ) {
+
+    }
+
+    // Get-methods
 
     async getADaoData(provider: ContractProvider, deployer_address: Address) {
         const { stack } = await provider.get('get_a_dao_data', []);
 
         return (
-            stack.readNumber(),
-            stack.readAddress(),
-            stack.readAddress(),
-            stack.readBigNumber(),
-            stack.readBigNumber(),
-            stack.readBigNumber(),
-            stack.readBigNumber(),
-            stack.readCell(),
-            stack.readCell(),
-            stack.readCell(),
-            stack.readCell(),
-            stack.readBigNumber(),
-            stack.readBigNumber(),
-            stack.readBigNumber()
+            stack.readNumber(), // int1 active?
+            stack.readAddress(), // slice root_address
+            stack.readAddress(), // slice deployer_address
+            stack.readBigNumber(), // uint32 transaction_fee
+            stack.readBigNumber(), // uint32 agreement_percent_numerator
+            stack.readBigNumber(), // uint32 agreement_percent_denominator
+            stack.readBigNumber(), // uint32 profit_reserve_percent_numerator
+            stack.readBigNumber(), // uint32 profit_reserve_percent_denominator
+            stack.readCell(), // dict profitable_addresses
+            stack.readCell(), // dict pending_invitations
+            stack.readCell(), // dict pending_transactions
+            stack.readCell(), // dict authorized_addresses
+            stack.readBigNumber(), // uint32 total_approval_points
+            stack.readBigNumber(), // uint32 total_profit_points
+            stack.readBigNumber() // uint32 total_profit_reserved
         );
     }
 

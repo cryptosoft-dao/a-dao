@@ -6,7 +6,6 @@
 
 global slice owner_address;
 global cell a_dao_code; ;; ref
-global int total_a_daos; ;; uint32
 global int next_a_dao_creation_fee; ;; uint32
 global int next_a_dao_transaction_fee; ;; uint32
 
@@ -17,7 +16,6 @@ global int next_a_dao_transaction_fee; ;; uint32
     slice ds = get_data().begin_parse();
     owner_address = ds~load_msg_addr();
     a_dao_code = ds~load_ref();
-    total_a_daos = ds~load_uint(32);
     next_a_dao_creation_fee = ds~load_coins();
     next_a_dao_transaction_fee = ds~load_coins();
     ds.end_parse();
@@ -29,7 +27,6 @@ global int next_a_dao_transaction_fee; ;; uint32
         begin_cell()
             .store_slice(owner_address)
             .store_ref(a_dao_code)
-            .store_uint(total_a_daos, 32)
             .store_uint(next_a_dao_creation_fee, 32)
             .store_uint(next_a_dao_transaction_fee, 32)
         .end_cell()
@@ -111,14 +108,7 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
 
     int op = in_msg_body~load_uint(32);
 
-    if (op == op::change_a_dao_minter_owner) {
 
-        throw_unless(666, equal_slices(sender_address, owner_address));
-        owner_address = in_msg_body~load_msg_addr();
-
-        save_data();
-
-    }
 
 }
 
@@ -129,14 +119,6 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
     return calculate_a_dao_address(calculate_a_dao_initial_state(deployer_address, a_dao_code));
 }
 
-(int) get_total_a_daos() {
-    return total_a_daos;
-}
-
 (int) get_next_a_dao_creation_fee() method_id {
     return next_a_dao_creation_fee;
-}
-
-(int) get_next_routing_pool_index() method_id {
-    return total_a_daos + 1;
 }

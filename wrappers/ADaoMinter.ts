@@ -17,7 +17,6 @@ import { ADao } from './ADao';
 export type ADaoMinterConfig = {
     OwnerAddress: Address;
     ADaoCode: Cell;
-    TotalADaos: number | bigint;
     NextADaoCreationFee: number | bigint;
     NextADaoTransactionFee: number | bigint;
 }
@@ -26,7 +25,6 @@ export function serializeADaoMinterConfigToCell(config: ADaoMinterConfig): Cell 
     return beginCell()
         .storeAddress(config.OwnerAddress)
         .storeRef(config.ADaoCode)
-        .storeUint(config.TotalADaos, 32)
         .storeCoins(config.NextADaoCreationFee)
         .storeCoins(config.NextADaoTransactionFee)
     .endCell();

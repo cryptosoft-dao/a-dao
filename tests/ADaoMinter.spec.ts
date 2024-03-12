@@ -48,7 +48,6 @@ describe('ADaoMinter', () => {
                 {
                     OwnerAddress: deployer.address,
                     ADaoCode: ADaoCode,
-                    TotalADaos: BigInt(0),
                     NextADaoCreationFee: toNano('10'),
                     NextADaoTransactionFee: toNano('0'),
                 }, 
@@ -88,26 +87,7 @@ describe('ADaoMinter', () => {
 
         printTransactionFees(ADaoMinterDeployResult.transactions);
 
-        /*
-
-        const deployADaoResult = await ADaoMinter.sendDeployADao(wallet0.getSender(), toNano('10.777'));
-
-        expect(deployADaoResult.transactions).toHaveTransaction({
-            from: wallet0.address,
-            to: ADaoMinter.address,
-        });
-
-        expect(deployADaoResult.transactions).toHaveTransaction({
-            from: ADaoMinter.address,
-            to: ADaoMinter.address,
-        });
-
-        expect(deployADaoResult.transactions).toHaveTransaction({
-            from: wallet0.address,
-            to: ADaoMinter.address,
-        });
-
-        */
+        firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
     });
 
