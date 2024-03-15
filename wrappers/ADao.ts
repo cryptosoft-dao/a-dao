@@ -1,11 +1,13 @@
 import { 
     Address, 
     beginCell, 
+    Builder,
     Cell, 
     Contract, 
     contractAddress, 
     ContractProvider, 
     Dictionary, 
+    DictionaryValue,
     Sender, 
     SendMode, 
     toNano 
@@ -24,6 +26,46 @@ export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
         .storeAddress(config.RootAddress)
         .storeUint(config.DeployerAddressSHA256, 256)
     .endCell();
+}
+
+export type ProfitableAddressValue = {
+    address: Address,
+}
+
+export function createProfitableAddressesValue(): DictionaryValue<ProfitableAddressValue> {
+    return {
+        serialize(src: ProfitableAddressValue, builder: Builder) {
+            builder.storeAddress(src.address);
+        },
+        parse: (src: Slice) => {
+            return {
+                address: src.loadAddress(),
+            };
+        },
+    };
+}
+
+export type PendingInvitationsValue = {
+    address: Address,
+    approval_points: number | bigint,
+    profit_points: number | bigint,
+}
+
+export function createPendingInvitationsValue(): DictionaryValue<PendingInvitationsValue> {
+    return {
+        serialize(src: PendingInvitationsValue, builder: Builder) {
+            builder.storeAddress(src.address);
+            builder.storeUint(src.approval_points, 32);
+            builder.storeUint(src.profit_points, 32);
+        },
+        parse: (src: Slice) => {
+            return {
+                address: src.loadAddress(),
+                approval_points: src.loadUint(32),
+                profit_points: src.loadUint(32),
+            };
+        },
+    };
 }
 
 export class ADao implements Contract {
@@ -50,11 +92,24 @@ export class ADao implements Contract {
             AgreementPercentDenominator: bigint | number,
             ProfitReservePercentNumerator: bigint | number,
             ProfitReservePercentDenominator: bigint | number,
-            ProfitableAddresses: Dictionary<bigint, Slice>,
-            PendingInvitations: Dictionary<bigint, Slice>,
+            ProfitableAddresses: Cell,
+            PendingInvitations: Cell,
         }
     ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ActivateADao, 32)
+                    .storeUint(opts.AgreementPercentNumerator, 32)
+                    .storeUint(opts.AgreementPercentDenominator, 32)
+                    .storeUint(opts.ProfitReservePercentNumerator, 32)
+                    .storeUint(opts.ProfitReservePercentDenominator, 32)
+                    .storeRef(opts.ProfitableAddresses)
+                    .storeRef(opts.PendingInvitations)
+                .endCell()
+        });
     }
 
     // Propose transaction

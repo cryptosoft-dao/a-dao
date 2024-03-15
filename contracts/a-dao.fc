@@ -59,6 +59,8 @@
 
     if (active? == false) {
 
+        throw(300);
+
         ds.end_parse();
         transaction_fee = 0;
         agreement_percent_numerator = 0;
@@ -476,12 +478,14 @@
         }
 
         if (transaction_type == tt::transfer_points) {
-            
+            return ();
         }
 
     }
 
     if (op == op::accept_invitation_to_a_dao) {
+
+        return ();
 
     }
 
@@ -503,7 +507,6 @@
     if (op == op::activate_a_dao) {
 
         throw_unless(333, equal_slices(sender_address, deployer_address));
-
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
         profit_reserve_percent_numerator = in_msg_body~load_uint(32);
@@ -518,7 +521,7 @@
 
     }
 
-    ;; In-protocol method
+    ;; Internal method of protocol
 
     if (op == op::process_deploy_message) {
 

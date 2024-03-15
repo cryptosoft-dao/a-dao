@@ -8,11 +8,11 @@ export const ADaoMinterOperationCodes = {
 
 export const ADaoOperationCodes = {
     ProcessDeployMessage: 0,
-    ActivateRoutingPool: 1,
+    ActivateADao: 1,
     ProposeTransaction: 2,
     ApproveTransaction: 3,
-    AcceptInvitationToRoutingPool: 4,
-    QuitRoutingPool: 5,
+    AcceptInvitationToADao: 4,
+    QuitADao: 5,
 };
 
 export const ADaoTransactionTypes = {

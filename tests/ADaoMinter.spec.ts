@@ -95,20 +95,28 @@ describe('ADaoMinter', () => {
 
         const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
 
-        const ProfitableAddressesDict = Dictionary.empty<bigint, Slice>();
-        ProfitableAddressesDict.set(bufferToBigInt(profitableAddress.address.hash), beginCell().storeAddress(profitableAddress.address).endCell().beginParse())
+        const ProfitableAddressesDict = Dictionary.empty<bigint, Cell>();
+        ProfitableAddressesDict.set(bufferToBigInt(profitableAddress.address.hash), beginCell().storeAddress(profitableAddress.address).endCell());
+        const ProfitableAddresses = beginCell().storeDictDirect(ProfitableAddressesDict, Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()).endCell();
 
-        const PendingInvitationsDict = Dictionary.empty<bigint, Slice>();
-        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(10 ,32).storeUint(10, 32).endCell().beginParse())
-        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(20 ,32).storeUint(20, 32).endCell().beginParse())
+        const PendingInvitationsDict = Dictionary.empty<bigint, Cell>();
+        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(10 ,32).storeUint(10, 32).endCell());
+        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(20 ,32).storeUint(20, 32).endCell());
+        const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()).endCell();
 
         const ADaoMinterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
             AgreementPercentNumerator: 33,
             AgreementPercentDenominator: 100,
             ProfitReservePercentNumerator: 10,
             ProfitReservePercentDenominator: 100,
-            ProfitableAddresses: ProfitableAddressesDict,
-            PendingInvitations: PendingInvitationsDict,
+            ProfitableAddresses: ProfitableAddresses,
+            PendingInvitations: PendingInvitations,
+        })
+
+        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: firstADao.address,
+            success: true,
         })
 
     });
