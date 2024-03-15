@@ -511,8 +511,10 @@
         agreement_percent_denominator = in_msg_body~load_uint(32);
         profit_reserve_percent_numerator = in_msg_body~load_uint(32);
         profit_reserve_percent_denominator = in_msg_body~load_uint(32);
-        profitable_addresses = in_msg_body~load_ref();
-        pending_invitations = in_msg_body~load_ref();
+        slice profitable_addresses_ref_cs = in_msg_body~load_ref().begin_parse();
+        profitable_addresses = profitable_addresses_ref_cs~load_dict();
+        slice pending_invitations_ref_cs = in_msg_body~load_ref().begin_parse();
+        pending_invitations = pending_invitations_ref_cs~load_dict();
         active? = true;
 
         send_invites_to_a_dao(pending_invitations);
