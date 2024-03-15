@@ -59,8 +59,6 @@
 
     if (active? == false) {
 
-        throw(300);
-
         ds.end_parse();
         transaction_fee = 0;
         agreement_percent_numerator = 0;
@@ -513,6 +511,7 @@
         profit_reserve_percent_denominator = in_msg_body~load_uint(32);
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
+        active? = true;
 
         send_invites_to_a_dao(pending_invitations);
 
@@ -544,8 +543,6 @@
         authorized_addresses = new_dict();
         total_approval_points = 0;
         total_profit_points = 0;
-
-        active? = true;
 
         save_data();
 
