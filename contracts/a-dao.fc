@@ -17,8 +17,8 @@
     global int agreement_percent_denominator; ;; int32
     global int profit_reserve_percent_numerator; ;; int32
     global int profit_reserve_percent_denominator; ;; int32
-    ;; pfxdict profitable_addresses
-        ;; Key: address prefix
+    ;; udict profitable_addresses
+        ;; Key: uint256 hash(address)
         ;; Value: slice profitable_address
     global cell profitable_addresses;
     ;; udict pending_invitations
@@ -37,8 +37,8 @@
             ;; cell approves
             ;; int32 approve_points
     global cell pending_transactions;
-    ;; pfxdict authorized_addresses
-        ;; Key: address prefix
+    ;; udict authorized_addresses
+        ;; Key: uint256 hash(address)
         ;; Value (Slice)
             ;; slice address
             ;; int32 approval_points
@@ -502,7 +502,7 @@
 
     if (op == op::activate_routing_pool) {
 
-        throw_unless(333, equal_slices(sender_address, root_address));
+        throw_unless(333, equal_slices(sender_address, deployer_addressS));
 
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);

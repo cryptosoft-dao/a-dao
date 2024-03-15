@@ -41,7 +41,7 @@ export class ADao implements Contract {
 
     // Activation
 
-    async sendActivateRoutingPool (
+    async sendActivate (
         provider: ContractProvider,
         via: Sender,
         value: bigint,

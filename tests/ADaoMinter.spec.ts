@@ -89,6 +89,19 @@ describe('ADaoMinter', () => {
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
+        const ProfitableAddressesDict = Dictionary.empty<bigint, Cell>();
+
+        
+
+        const ADaoMinterActivationResult = await firstADao.sendActivate(deployer.getSender(), toNano('0.33'), {
+            AgreementPercentNumerator: 0,
+            AgreementPercentDenominator: 0,
+            ProfitReservePercentNumerator: 0,
+            ProfitReservePercentDenominator: 0,
+            ProfitableAddresses: Dictionary<bigint, Slice>,
+            PendingInvitations: Dictionary<bigint, Slice>,
+        })
+
     });
 
     it('should deploy', async () => {

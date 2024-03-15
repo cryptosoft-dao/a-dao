@@ -3,6 +3,7 @@ import { NetworkProvider } from '@ton/blueprint';
 import {
 
 } from '../tests/utils/buildContent';
+import { sha256Hash } from '../tests/utils/Helpers';
 
 enum Operations {
     'build profitable_addresses dict' = 1,
@@ -33,15 +34,11 @@ async function buildProfitableAddressesContent(provider: NetworkProvider) {
     for (let i = 0; i < +addresses_number; i += 1) {
 
         const address = await ui.input('');
-        const approval_points = await ui.input('');
-        const profit_points = await ui.input('');
 
         ProfitableAddressesDict.set(
-            BigInt(i), 
+            sha256Hash(address), 
             beginCell()
                 .storeAddress(Address.parseFriendly(address).address)
-                .storeUint(+approval_points, 32)
-                .storeUint(+profit_points, 32)
             .endCell()
         );
 
