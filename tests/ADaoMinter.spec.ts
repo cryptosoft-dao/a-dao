@@ -1,9 +1,10 @@
 import { Blockchain, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
-import { Address, beginCell, Cell, Dictionary, toNano, TransactionDescriptionGeneric } from '@ton/core';
+import { Address, beginCell, Cell, Dictionary, Slice, toNano, TransactionDescriptionGeneric } from '@ton/core';
 import { ADaoMinter } from '../wrappers/ADaoMinter';
 import { ADao } from '../wrappers/ADao';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
+import { profile } from 'console';
 
 describe('ADaoMinter', () => {
 
@@ -21,6 +22,7 @@ describe('ADaoMinter', () => {
     let wallet3: SandboxContract<TreasuryContract>;
     let wallet4: SandboxContract<TreasuryContract>;
     let wallet5: SandboxContract<TreasuryContract>;
+    let profitableAddress: SandboxContract<TreasuryContract>;
 
     let ADaoMinterCode: Cell;
     let ADaoCode: Cell;
@@ -40,6 +42,7 @@ describe('ADaoMinter', () => {
         wallet3 = await blockchain.treasury('wallet3');
         wallet4 = await blockchain.treasury('wallet4');
         wallet5 = await blockchain.treasury('wallet5');
+        profitableAddress = await blockchain.treasury('profitableAddress');
 
         // Params
 
@@ -73,7 +76,6 @@ describe('ADaoMinter', () => {
             success: true,
         });
 
-        const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
         const firstADaoAddresss = await aDaoMinter.getADaoAddressByDeployerAddress(deployer.address);
 
         console.log(firstADaoAddresss);
@@ -89,17 +91,24 @@ describe('ADaoMinter', () => {
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
-        const ProfitableAddressesDict = Dictionary.empty<bigint, Cell>();
+        // Activate a-dao
 
-        
+        const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
 
-        const ADaoMinterActivationResult = await firstADao.sendActivate(deployer.getSender(), toNano('0.33'), {
-            AgreementPercentNumerator: 0,
-            AgreementPercentDenominator: 0,
-            ProfitReservePercentNumerator: 0,
-            ProfitReservePercentDenominator: 0,
-            ProfitableAddresses: Dictionary<bigint, Slice>,
-            PendingInvitations: Dictionary<bigint, Slice>,
+        const ProfitableAddressesDict = Dictionary.empty<bigint, Slice>();
+        ProfitableAddressesDict.set(bufferToBigInt(profitableAddress.address.hash), beginCell().storeAddress(profitableAddress.address).endCell().beginParse())
+
+        const PendingInvitationsDict = Dictionary.empty<bigint, Slice>();
+        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(10 ,32).storeUint(10, 32).endCell().beginParse())
+        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(20 ,32).storeUint(20, 32).endCell().beginParse())
+
+        const ADaoMinterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
+            AgreementPercentNumerator: 33,
+            AgreementPercentDenominator: 100,
+            ProfitReservePercentNumerator: 10,
+            ProfitReservePercentDenominator: 100,
+            ProfitableAddresses: ProfitableAddressesDict,
+            PendingInvitations: PendingInvitationsDict,
         })
 
     });

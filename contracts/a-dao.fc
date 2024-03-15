@@ -128,7 +128,7 @@
     return success?;
 }
 
-() send_invites_to_routing_pool(cell pending_invitations) inline {
+() send_invites_to_a_dao(cell pending_invitations) inline {
 
         ;; Send invites to routing pool
 
@@ -379,11 +379,11 @@
         int deadline = in_msg_body.preload_uint(32);
         cell transaction_info = in_msg_body.preload_ref();
 
-        int transaction_index = pending_transactions.udict_get_max?(32);
+        (int transaction_index, _, _) = pending_transactions.udict_get_max?(32);
 
         slice transaction_info_cs = transaction_info.begin_parse();
 
-        cell approves = 0;
+        cell approves = new_dict();
         int approve_points = 0;
 
         ;; Index 0: Add address
@@ -397,7 +397,7 @@
             transaction_info_cs~load_uint(32); ;; int approval_points
             transaction_info_cs~load_uint(32); ;; int profit_points
 
-            pending_transactions.udict_add?(32, transaction_index, in_msg_body.store_ref(approves, 32).store_uint(approve_points, 32));
+            pending_transactions.udict_add?(32, transaction_index, begin_cell().store_slice(in_msg_body).store_dict(approves).store_uint(approve_points, 32).end_cell().begin_parse());
 
             save_data();
             return ();
@@ -481,17 +481,17 @@
 
     }
 
-    if (op == op::accept_invitation_to_routing_pool) {
+    if (op == op::accept_invitation_to_a_dao) {
 
     }
 
-    if (op == op::quit_routing_pool) {
+    if (op == op::quit_a_dao) {
 
         ;; Check if sender is an authorized routing pool wallet
 
         int address_index = in_msg_body~load_uint(8);
 
-        check_authority(sender_address, address_index);
+        check_authority(sender_address);
 
         authorized_addresses.udict_delete?(8, address_index);
 
@@ -500,9 +500,9 @@
 
     }
 
-    if (op == op::activate_routing_pool) {
+    if (op == op::activate_a_dao) {
 
-        throw_unless(333, equal_slices(sender_address, deployer_addressS));
+        throw_unless(333, equal_slices(sender_address, deployer_address));
 
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
@@ -511,7 +511,7 @@
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
 
-        send_invites_to_routing_pool(pending_invitations);
+        send_invites_to_a_dao(pending_invitations);
 
         save_data();
         return ();
@@ -533,7 +533,7 @@
             agreement_percent_denominator = in_msg_body~load_uint(32);
             pending_invitations = in_msg_body~load_dict();
 
-            send_invites_to_routing_pool(pending_invitations);
+            send_invites_to_a_dao(pending_invitations);
 
         }
 

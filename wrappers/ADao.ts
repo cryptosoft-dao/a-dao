@@ -11,7 +11,7 @@ import {
     toNano 
 } from '@ton/core';
 import { ADaoMinterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
-import { Slice } from 'ton-core';
+import { Slice } from '@ton/core';
 
 export type ADaoConfig = {
     Active: number;
@@ -39,9 +39,9 @@ export class ADao implements Contract {
         return new ADao(contractAddress(workchain, init), init);
     }
 
-    // Activation
+    // Activate A Dao
 
-    async sendActivate (
+    async sendActivateADao (
         provider: ContractProvider,
         via: Sender,
         value: bigint,

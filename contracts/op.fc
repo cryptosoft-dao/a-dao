@@ -5,8 +5,8 @@
 ;; a_dao.fc
 
     const int op::process_deploy_message = 0;
-    const int op::activate_routing_pool = 1;
+    const int op::activate_a_dao = 1;
     const int op::propose_transaction = 2;
     const int op::approve_transaction = 3;
-    const int op::accept_invitation_to_routing_pool = 4;
-    const int op::quit_routing_pool = 5;
+    const int op::accept_invitation_to_a_dao = 4;
+    const int op::quit_a_dao = 5;
