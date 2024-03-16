@@ -50,6 +50,29 @@
 
 ;; Storage functions
 
+() save_data() impure inline {
+
+    set_data(
+        begin_cell()
+            .store_int(active?)
+            .store_slice(root_address)
+            .store_slice(deployer_address)
+            .store_uint(transaction_fee, 32)
+            .store_uint(agreement_percent_numerator, 32)
+            .store_uint(agreement_percent_denominator, 32)
+            .store_uint(profit_reserve_percent_numerator, 32)
+            .store_uint(profit_reserve_percent_denominator, 32)
+            .store_dict(profitable_addresses)
+            .store_dict(pending_invitations)
+            .store_dict(pending_transactions)
+            .store_dict(authorized_addresses)
+            .store_uint(total_approval_points, 32)
+            .store_uint(total_profit_points, 32)
+            .store_uint(total_profit_reserved, 32)
+        .end_cell()
+    );
+}
+
 () load_data() impure inline { 
 
     slice ds = get_data().begin_parse();
@@ -58,6 +81,8 @@
     deployer_address = ds~load_msg_addr();
 
     if (active? == false) {
+
+        ~strdump("active? == false");
 
         transaction_fee = 0;
         agreement_percent_numerator = 0;
@@ -72,10 +97,9 @@
         total_profit_points = 0; 
         total_profit_reserved = 0;
 
-        save_data();
-        
-
     } else {
+
+        ~strdump("else");
 
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
@@ -90,25 +114,6 @@
 
     }
 
-}
-
-() save_data() impure inline {
-
-    set_data(
-        begin_cell()
-            .store_slice(root_address)
-            .store_slice(deployer_address)
-            .store_uint(transaction_fee, 32)
-            .store_uint(agreement_percent_numerator, 32)
-            .store_uint(agreement_percent_denominator, 32)
-            .store_dict(profitable_addresses)
-            .store_dict(pending_invitations)
-            .store_dict(pending_transactions)
-            .store_dict(authorized_addresses)
-            .store_uint(total_approval_points, 32)
-            .store_uint(total_profit_points, 32)
-        .end_cell()
-    );
 }
 
 () clear_pending_transactions_queue(cell pending_transactions) inline {
@@ -180,6 +185,8 @@
     }
 
     int op = in_msg_body~load_uint(32);
+
+    ~strdump("Hello");
 
     load_data();
 
@@ -507,6 +514,7 @@
 
         throw_unless(333, equal_slices(sender_address, deployer_address));
 
+        active? = true;
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
         profit_reserve_percent_numerator = in_msg_body~load_uint(32);
@@ -515,7 +523,6 @@
         profitable_addresses = profitable_addresses_ref_cs~load_dict();
         slice pending_invitations_ref_cs = in_msg_body~load_ref().begin_parse();
         pending_invitations = pending_invitations_ref_cs~load_dict();
-        active? = true;
 
         send_invites_to_a_dao(pending_invitations);
 

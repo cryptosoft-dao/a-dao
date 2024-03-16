@@ -41,7 +41,7 @@ cell calculate_a_dao_initial_state(
     ) {
   cell a_dao_data = 
     begin_cell()
-        .store_uint(0, 1) ;; int1 active?
+        .store_int(0, 1) ;; int1 active?
         .store_slice(my_address()) ;; slice root_address
         .store_slice(deployer_address)
     .end_cell();

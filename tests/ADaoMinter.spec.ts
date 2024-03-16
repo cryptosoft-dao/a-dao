@@ -58,15 +58,6 @@ describe('ADaoMinter', () => {
             ),
         );
 
-        /* 
-        
-        blockchain.setVerbosityForAddress(ADaoMinter.address, {
-            blockchainLogs: true,
-            vmLogs: 'vm_logs_full'
-        }) 
-        
-        */
-
         const ADaoMinterDeployResult = await aDaoMinter.sendDeploy(deployer.getSender(), toNano('10.777'));
 
         expect(ADaoMinterDeployResult.transactions).toHaveTransaction({
@@ -78,8 +69,6 @@ describe('ADaoMinter', () => {
 
         const firstADaoAddresss = await aDaoMinter.getADaoAddressByDeployerAddress(deployer.address);
 
-        console.log(firstADaoAddresss);
-
         expect(ADaoMinterDeployResult.transactions).toHaveTransaction({
             from: aDaoMinter.address,
             to: firstADaoAddresss,
@@ -90,6 +79,15 @@ describe('ADaoMinter', () => {
         printTransactionFees(ADaoMinterDeployResult.transactions);
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
+
+        /*
+
+        blockchain.setVerbosityForAddress(firstADao.address, {
+            blockchainLogs: true,
+            vmLogs: 'vm_logs_full'
+        }) 
+
+        */
 
         // Activate a-dao
 
