@@ -13,6 +13,7 @@ export const ADaoOperationCodes = {
     ApproveTransaction: 3,
     AcceptInvitationToADao: 4,
     QuitADao: 5,
+    InviteToADao: 6,
 };
 
 export const ADaoTransactionTypes = {

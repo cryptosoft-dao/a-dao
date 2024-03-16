@@ -5,6 +5,7 @@ import { ADao } from '../wrappers/ADao';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { profile } from 'console';
+import { ADaoOperationCodes } from '../wrappers/Config';
 
 describe('ADaoMinter', () => {
 
@@ -109,13 +110,41 @@ describe('ADaoMinter', () => {
             ProfitReservePercentDenominator: 100,
             ProfitableAddresses: ProfitableAddresses,
             PendingInvitations: PendingInvitations,
-        })
+        });
 
         expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
             from: deployer.address,
             to: firstADao.address,
             success: true,
-        })
+        });
+
+        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: wallet0.address,
+            success: true,
+            op: ADaoOperationCodes.InviteToADao,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.InviteToADao, 32)
+                    .storeUint(0, 32)
+                    .storeUint(10, 32)
+                    .storeUint(10, 32)
+                .endCell(),
+        });
+
+        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: wallet1.address,
+            success: true,
+            op: ADaoOperationCodes.InviteToADao,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.InviteToADao, 32)
+                    .storeUint(1, 32)
+                    .storeUint(20, 32)
+                    .storeUint(20, 32)
+                .endCell(),
+        });
 
         printTransactionFees(ADaoMinterActivationResult.transactions);
 

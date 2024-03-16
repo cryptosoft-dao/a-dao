@@ -135,46 +135,6 @@
 
 () send_invites_to_a_dao(cell pending_invitations) impure inline {
 
-        ;; Send invites to routing pool
-
-        (int key, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
-
-        while (flag) {
-
-            key~dump();
-            val~dump();
-
-            slice val_cs = val.begin_parse();
-
-            slice address = val_cs~load_msg_addr();
-            int approval_points = val_cs~load_uint(32);
-            int profit_points = val_cs~load_uint(32);
-
-            cell msg = 
-                begin_cell()
-                    .store_uint(0x10, 6)
-                    .store_slice(address)
-                    .store_coins(30000000) ;; check on tests
-                    .store_uint(0, 107)
-                    .store_ref(
-                        begin_cell()
-                            .store_uint(approval_points, 32)
-                            .store_uint(profit_points, 32)
-                            .store_uint(0, 32)
-                        .end_cell()
-                    )
-                .end_cell();
-
-            send_raw_message(msg, 0);
-
-            key += 1;
-
-            (val, flag) = pending_invitations.udict_get_ref?(32, key);
-
-            active? = true;
-            
-        }
-
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -494,12 +454,6 @@
 
     }
 
-    if (op == op::accept_invitation_to_a_dao) {
-
-        return ();
-
-    }
-
     if (op == op::quit_a_dao) {
 
         ;; Check if sender is an authorized routing pool wallet
@@ -511,6 +465,23 @@
         authorized_addresses.udict_delete?(8, address_index);
 
         save_data();
+        return ();
+
+    }
+
+    if (op == op::accept_invitation_to_a_dao) {
+
+        int key = in_msg_body~load_uint(32);
+
+        (cell val, int flag) = pending_invitations.udict_get_ref?(32, key);
+        slice val_cs = val.begin_parse();
+
+        if (flag & equal_slices(sender_address, val_cs~load_msg_addr())) {
+
+            authorized_addresses.udict_set_ref(32, key, val);
+
+        }
+
         return ();
 
     }
@@ -527,7 +498,43 @@
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
 
-        send_invites_to_a_dao(pending_invitations);
+        ;; Send invites to A DAO
+
+        (int key, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
+
+        while (flag) {
+
+            slice val_cs = val.begin_parse();
+
+            slice address = val_cs~load_msg_addr();
+            int approval_points = val_cs~load_uint(32);
+            int profit_points = val_cs~load_uint(32);
+
+            cell msg = 
+                begin_cell()
+                    .store_uint(0x18, 6)
+                    .store_slice(address)
+                    .store_coins(30000000) ;; check on tests
+                    .store_uint(1, 107)
+                    .store_ref(
+                        begin_cell()
+                            .store_uint(op::invite_to_a_dao, 32)
+                            .store_uint(key, 32)
+                            .store_uint(approval_points, 32)
+                            .store_uint(profit_points, 32)
+                        .end_cell()
+                    )
+                .end_cell();
+
+            send_raw_message(msg, 0);
+
+            key += 1;
+
+            (val, flag) = pending_invitations.udict_get_ref?(32, key);
+
+            active? = true;
+            
+        }
 
         save_data();
         return ();
