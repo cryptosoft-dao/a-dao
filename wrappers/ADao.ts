@@ -106,8 +106,8 @@ export class ADao implements Contract {
                     .storeUint(opts.AgreementPercentDenominator, 32)
                     .storeUint(opts.ProfitReservePercentNumerator, 32)
                     .storeUint(opts.ProfitReservePercentDenominator, 32)
-                    .storeRef(opts.ProfitableAddresses)
-                    .storeRef(opts.PendingInvitations)
+                    .storeMaybeRef(opts.ProfitableAddresses)
+                    .storeMaybeRef(opts.PendingInvitations)
                 .endCell()
         });
     }

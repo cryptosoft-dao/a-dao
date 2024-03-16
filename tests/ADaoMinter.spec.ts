@@ -99,8 +99,8 @@ describe('ADaoMinter', () => {
 
         const PendingInvitationsDict = Dictionary.empty<bigint, Cell>();
         PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(10 ,32).storeUint(10, 32).endCell());
-        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet1.address).storeUint(20 ,32).storeUint(20, 32).endCell());
-        const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()).endCell();
+        PendingInvitationsDict.set(BigInt(1), beginCell().storeAddress(wallet1.address).storeUint(20 ,32).storeUint(20, 32).endCell());
+        const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
         const ADaoMinterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
             AgreementPercentNumerator: 33,

@@ -133,19 +133,22 @@
     return success?;
 }
 
-() send_invites_to_a_dao(cell pending_invitations) inline {
-
-        ~strdump("send_invites_to_a_dao");
+() send_invites_to_a_dao(cell pending_invitations) impure inline {
 
         ;; Send invites to routing pool
 
-        (int key, slice val, int flag) = pending_invitations.udict_get_min?(256);
-        
+        (int key, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
+
         while (flag) {
 
-            slice address = val~load_msg_addr();
-            int approval_points = val~load_uint(32);
-            int profit_points = val~load_uint(32);
+            key~dump();
+            val~dump();
+
+            slice val_cs = val.begin_parse();
+
+            slice address = val_cs~load_msg_addr();
+            int approval_points = val_cs~load_uint(32);
+            int profit_points = val_cs~load_uint(32);
 
             cell msg = 
                 begin_cell()
@@ -164,7 +167,9 @@
 
             send_raw_message(msg, 0);
 
-            (key, val, flag) = pending_invitations.udict_get_next?(256, key);
+            key += 1;
+
+            (val, flag) = pending_invitations.udict_get_ref?(32, key);
 
             active? = true;
             
@@ -519,17 +524,10 @@
         agreement_percent_denominator = in_msg_body~load_uint(32);
         profit_reserve_percent_numerator = in_msg_body~load_uint(32);
         profit_reserve_percent_denominator = in_msg_body~load_uint(32);
-        
-        slice profitable_addresses_ref_cs = in_msg_body~load_ref().begin_parse();
-        slice pending_invitations_ref_cs = in_msg_body~load_ref().begin_parse();
-        
-        profitable_addresses = profitable_addresses_ref_cs~load_dict();
-        pending_invitations = pending_invitations_ref_cs~load_dict();
+        profitable_addresses = in_msg_body~load_dict();
+        pending_invitations = in_msg_body~load_dict();
 
-        ~strdump("before send_invites_to_a_dao");
-        pending_invitations~dump();
         send_invites_to_a_dao(pending_invitations);
-        ~strdump("after send_invites_to_a_dao");
 
         save_data();
         return ();
