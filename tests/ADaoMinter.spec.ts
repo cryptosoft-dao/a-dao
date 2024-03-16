@@ -148,6 +148,36 @@ describe('ADaoMinter', () => {
 
         printTransactionFees(ADaoMinterActivationResult.transactions);
 
+        // Wallet0 accepts invitation to A DAO
+
+        const wallet0AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet0.getSender(), toNano('0.33'), {
+            Key: 0,
+        })
+
+        expect(wallet0AcceptsInvitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.AcceptInvitationToADao,
+            success: true,
+        })
+
+        printTransactionFees(wallet0AcceptsInvitation.transactions);
+
+        // Wallet1 accepts invitation to A DAO
+
+        const wallet1AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet1.getSender(), toNano('0.33'), {
+            Key: 1
+        })
+
+        expect(wallet1AcceptsInvitation.transactions).toHaveTransaction({
+            from: wallet1.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.AcceptInvitationToADao,
+            success: true,
+        })
+
+        printTransactionFees(wallet1AcceptsInvitation.transactions);
+
     });
 
     it('should deploy', async () => {

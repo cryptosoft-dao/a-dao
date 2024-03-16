@@ -112,6 +112,33 @@ export class ADao implements Contract {
         });
     }
 
+    // General
+
+    async sendAcceptInvitationToADao(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Key: bigint | number,
+        }
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.AcceptInvitationToADao, 32)
+                    .storeUint(opts.Key, 32)
+                .endCell()
+        });
+    }
+    
+    async sendQuitRoutingPool(
+        
+        ) {
+
+        }
+
     // Propose transaction
 
     async sendProposeInviteAddress(
@@ -218,20 +245,6 @@ export class ADao implements Contract {
     }
 
     async sendApproveTransferPoints(
-        
-    ) {
-
-    }
-
-    // General
-
-    async sendAcceptInvitationToRoutingPool(
-        
-    ) {
-
-    }
-
-    async sendQuitRoutingPool(
         
     ) {
 
