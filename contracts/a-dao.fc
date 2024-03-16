@@ -54,7 +54,7 @@
 
     set_data(
         begin_cell()
-            .store_int(active?)
+            .store_int(active?, 1)
             .store_slice(root_address)
             .store_slice(deployer_address)
             .store_uint(transaction_fee, 32)
@@ -99,7 +99,7 @@
 
     } else {
 
-        ~strdump("else");
+        ~strdump("active? == true");
 
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
