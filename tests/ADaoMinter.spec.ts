@@ -186,8 +186,20 @@ describe('ADaoMinter', () => {
 
     });
 
-    it('should deploy', async () => {
-        // the check is done inside beforeEach
-        // blockchain and ADaoMinter are ready to use
+    it('Wallet0 should quit A DAO', async () => {
+
+        const wallet0QuitsADao = await firstADao.sendQuitADao(wallet0.getSender(), toNano('0.33'), {
+            Key: 0,
+        })
+
+        expect(wallet0QuitsADao.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.QuitADao,
+            success: true,
+        })
+
+        printTransactionFees(wallet0QuitsADao.transactions);
+
     });
 });

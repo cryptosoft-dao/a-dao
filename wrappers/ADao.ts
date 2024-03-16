@@ -151,11 +151,24 @@ export class ADao implements Contract {
         });
     }
     
-    async sendQuitRoutingPool(
-        
-        ) {
-
+    async sendQuitADao(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Key: bigint | number,
         }
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.QuitADao, 32)
+                    .storeUint(opts.Key, 32)
+                .endCell()
+        });
+    }
 
     // Propose transaction
 
