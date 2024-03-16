@@ -81,6 +81,9 @@ describe('ADaoMinter', () => {
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
+        const ADaoDataBeforeActivation = await firstADao.getADaoData();
+        expect(ADaoDataBeforeActivation.active).toStrictEqual(0);
+
         /*
 
         blockchain.setVerbosityForAddress(firstADao.address, {
@@ -148,6 +151,9 @@ describe('ADaoMinter', () => {
 
         printTransactionFees(ADaoMinterActivationResult.transactions);
 
+        const ADaoDataAfterActivation = await firstADao.getADaoData();
+        expect(ADaoDataAfterActivation.active).toStrictEqual(1);
+
         // Wallet0 accepts invitation to A DAO
 
         const wallet0AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet0.getSender(), toNano('0.33'), {
@@ -162,7 +168,7 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(wallet0AcceptsInvitation.transactions);
-
+        
         // Wallet1 accepts invitation to A DAO
 
         const wallet1AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet1.getSender(), toNano('0.33'), {

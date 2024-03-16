@@ -51,7 +51,6 @@
 ;; Storage functions
 
 () save_data() impure inline {
-
     set_data(
         begin_cell()
             .store_int(active?, 1)
@@ -456,13 +455,22 @@
 
     if (op == op::quit_a_dao) {
 
-        ;; Check if sender is an authorized routing pool wallet
+        int key = in_msg_body~load_uint(32);
 
-        int address_index = in_msg_body~load_uint(8);
+        ~strdump("key parsed");
 
-        check_authority(sender_address);
+        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, key);
+        val~dump();
+        flag~dump();
+        slice val_cs = val.begin_parse();
 
-        authorized_addresses.udict_delete?(8, address_index);
+        ~strdump("AA parsed");
+
+        if (flag & equal_slices(sender_address, val_cs~load_msg_addr())) {
+
+            authorized_addresses.udict_delete?(32, key);
+
+        }
 
         save_data();
         return ();
@@ -474,14 +482,33 @@
         int key = in_msg_body~load_uint(32);
 
         (cell val, int flag) = pending_invitations.udict_get_ref?(32, key);
+
         slice val_cs = val.begin_parse();
 
-        if (flag & equal_slices(sender_address, val_cs~load_msg_addr())) {
+        slice address = val_cs~load_msg_addr();
+        int approval_points = val_cs~load_uint(32);
+        int profit_points = val_cs~load_uint(32);
+
+        address~dump();
+        approval_points~dump();
+        profit_points~dump();
+
+        if (flag & equal_slices(sender_address, address)) {
 
             authorized_addresses.udict_set_ref(32, key, val);
 
+            total_approval_points~dump();
+            total_profit_points~dump();
+
+            total_approval_points = total_approval_points + approval_points;
+            total_profit_points = total_profit_points + profit_points;
+
+            total_approval_points~dump();
+            total_profit_points~dump();
+
         }
 
+        save_data();
         return ();
 
     }
@@ -584,7 +611,7 @@ int get_a_dao_status() {
     return active?;
 }
 
-(int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() {
+(int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
 
     load_data();
 

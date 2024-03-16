@@ -15,6 +15,24 @@ import {
 import { ADaoMinterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
 import { Slice } from '@ton/core';
 
+export type ADaoData = {
+    active: number | bigint;
+    root_address: Address;
+    deployer_address: Address;
+    transaction_fee: number | bigint;
+    agreement_percent_numerator: number | bigint;
+    agreement_percent_denominator: number | bigint;
+    profit_reserve_percent_numerator: number | bigint;
+    profit_reserve_percent_denominator: number | bigint;
+    profitable_addresses: Cell | null;
+    pending_invitations: Cell | null;
+    pending_transactions: Cell | null;
+    authorized_addresses: Cell | null;
+    total_approval_points: number | bigint;
+    total_profit_points: number | bigint;
+    total_profit_reserved: number | bigint;
+}
+
 export type ADaoConfig = {
     Active: number;
     RootAddress: Address,
@@ -257,26 +275,45 @@ export class ADao implements Contract {
         return result.stack.readNumber(); // int1 active?
     }
 
-    async getADaoData(provider: ContractProvider) {
-        const { stack } = await provider.get('get_a_dao_data', []);
+    async getADaoData(provider: ContractProvider): Promise<ADaoData> {
 
-        return (
-            stack.readNumber(), // int1 active?
-            stack.readAddress(), // slice root_address
-            stack.readAddress(), // slice deployer_address
-            stack.readBigNumber(), // uint32 transaction_fee
-            stack.readBigNumber(), // uint32 agreement_percent_numerator
-            stack.readBigNumber(), // uint32 agreement_percent_denominator
-            stack.readBigNumber(), // uint32 profit_reserve_percent_numerator
-            stack.readBigNumber(), // uint32 profit_reserve_percent_denominator
-            stack.readCellOpt(), // dict profitable_addresses
-            stack.readCellOpt(), // dict pending_invitations
-            stack.readCellOpt(), // dict pending_transactions
-            stack.readCellOpt(), // dict authorized_addresses
-            stack.readBigNumber(), // uint32 total_approval_points
-            stack.readBigNumber(), // uint32 total_profit_points
-            stack.readBigNumber() // uint32 total_profit_reserved
-        );
+        const result = await provider.get('get_a_dao_data', []);
+
+        const active = result.stack.readNumber();
+        const root_address = result.stack.readAddress();
+        const deployer_address = result.stack.readAddress();
+        const transaction_fee = result.stack.readBigNumber();
+        const agreement_percent_numerator = result.stack.readBigNumber();
+        const agreement_percent_denominator = result.stack.readBigNumber();
+        const profit_reserve_percent_numerator = result.stack.readBigNumber();
+        const profit_reserve_percent_denominator = result.stack.readBigNumber();
+        const profitable_addresses = result.stack.readCellOpt();
+        const pending_invitations = result.stack.readCellOpt();
+        const pending_transactions = result.stack.readCellOpt();
+        const authorized_addresses = result.stack.readCellOpt();
+        const total_approval_points = result.stack.readBigNumber();
+        const total_profit_points = result.stack.readBigNumber();
+        const total_profit_reserved = result.stack.readBigNumber();
+
+
+        return {
+            active,
+            root_address,
+            deployer_address,
+            transaction_fee,
+            agreement_percent_numerator,
+            agreement_percent_denominator,
+            profit_reserve_percent_numerator,
+            profit_reserve_percent_denominator,
+            profitable_addresses,
+            pending_invitations,
+            pending_transactions,
+            authorized_addresses,
+            total_approval_points,
+            total_profit_points,
+            total_profit_reserved,
+        };
+
     }
 
 }
