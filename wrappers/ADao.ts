@@ -239,7 +239,7 @@ export class ADao implements Contract {
 
     // Get-methods
 
-    async getADaoData(provider: ContractProvider, deployer_address: Address) {
+    async getADaoData(provider: ContractProvider) {
         const { stack } = await provider.get('get_a_dao_data', []);
 
         return (
