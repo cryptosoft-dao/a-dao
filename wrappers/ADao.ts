@@ -239,6 +239,11 @@ export class ADao implements Contract {
 
     // Get-methods
 
+    async getADaoStatus(provider: ContractProvider): Promise<number> {
+        const result = await provider.get('get_a_dao_status', []);
+        return result.stack.readNumber(); // int1 active?
+    }
+
     async getADaoData(provider: ContractProvider) {
         const { stack } = await provider.get('get_a_dao_data', []);
 
@@ -251,10 +256,10 @@ export class ADao implements Contract {
             stack.readBigNumber(), // uint32 agreement_percent_denominator
             stack.readBigNumber(), // uint32 profit_reserve_percent_numerator
             stack.readBigNumber(), // uint32 profit_reserve_percent_denominator
-            stack.readCell(), // dict profitable_addresses
-            stack.readCell(), // dict pending_invitations
-            stack.readCell(), // dict pending_transactions
-            stack.readCell(), // dict authorized_addresses
+            stack.readCellOpt(), // dict profitable_addresses
+            stack.readCellOpt(), // dict pending_invitations
+            stack.readCellOpt(), // dict pending_transactions
+            stack.readCellOpt(), // dict authorized_addresses
             stack.readBigNumber(), // uint32 total_approval_points
             stack.readBigNumber(), // uint32 total_profit_points
             stack.readBigNumber() // uint32 total_profit_reserved

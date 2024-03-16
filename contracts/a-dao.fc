@@ -82,8 +82,6 @@
 
     if (active? == false) {
 
-        ~strdump("active? == false");
-
         transaction_fee = 0;
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
@@ -98,8 +96,6 @@
         total_profit_reserved = 0;
 
     } else {
-
-        ~strdump("active? == true");
 
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
@@ -139,9 +135,12 @@
 
 () send_invites_to_a_dao(cell pending_invitations) inline {
 
+        ~strdump("send_invites_to_a_dao");
+
         ;; Send invites to routing pool
 
         (int key, slice val, int flag) = pending_invitations.udict_get_min?(256);
+        
         while (flag) {
 
             slice address = val~load_msg_addr();
@@ -188,8 +187,6 @@
     }
 
     int op = in_msg_body~load_uint(32);
-
-    ~strdump("Hello");
 
     load_data();
 
@@ -529,7 +526,10 @@
         profitable_addresses = profitable_addresses_ref_cs~load_dict();
         pending_invitations = pending_invitations_ref_cs~load_dict();
 
+        ~strdump("before send_invites_to_a_dao");
+        pending_invitations~dump();
         send_invites_to_a_dao(pending_invitations);
+        ~strdump("after send_invites_to_a_dao");
 
         save_data();
         return ();
@@ -573,6 +573,11 @@
 }
 
 ;; Custom get-methods
+
+int get_a_dao_status() {
+    load_data();
+    return active?;
+}
 
 (int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() {
 
