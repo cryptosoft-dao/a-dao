@@ -76,7 +76,7 @@
 () load_data() impure inline { 
 
     slice ds = get_data().begin_parse();
-    active? = ds~load_uint(1);
+    active? = ds~load_int(1);
     root_address = ds~load_msg_addr();
     deployer_address = ds~load_msg_addr();
 
@@ -577,7 +577,6 @@
         active? = false;
 
         save_data();
-
         return();
 
     }
@@ -593,7 +592,7 @@ int get_a_dao_status() {
     return active?;
 }
 
-(int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() {
+(int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
 
     load_data();
 

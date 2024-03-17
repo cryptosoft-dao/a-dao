@@ -151,7 +151,7 @@ describe('ADaoMinter', () => {
         printTransactionFees(ADaoMinterActivationResult.transactions);
 
         const ADaoDataAfterActivation = await firstADao.getADaoData();
-        expect(ADaoDataAfterActivation.active).toStrictEqual(1);
+        expect(ADaoDataAfterActivation.active).toStrictEqual(-1);
 
         // Wallet0 accepts invitation to A DAO
 
@@ -201,4 +201,5 @@ describe('ADaoMinter', () => {
         printTransactionFees(wallet0QuitsADao.transactions);
 
     });
+
 });
