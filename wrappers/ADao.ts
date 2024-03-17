@@ -170,6 +170,27 @@ export class ADao implements Contract {
         });
     }
 
+    async sendChangeMyAddress(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Key: bigint | number,
+            NewAddress: Address,
+        }
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ChangeMyAddress, 32)
+                    .storeUint(opts.Key, 32)
+                    .storeAddress(opts.NewAddress)
+                .endCell()
+        });
+    }
+
     // Propose transaction
 
     async sendProposeInviteAddress(

@@ -355,6 +355,8 @@
 
         ;; Check if sender is an authorized routing pool wallet
 
+        int address_index = 
+
         check_authority(sender_address);
 
         int transaction_type = in_msg_body.preload_uint(4);
@@ -463,13 +465,44 @@
 
     }
 
+    if (op == op::change_my_address) {
+
+        int address_index = in_msg_body~load_uint(32);
+        slice new_address = in_msg_body~load_msg_addr();
+
+        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, address_index);
+
+        if (flag) {
+
+            slice val_cs = val.begin_parse();
+
+            slice address = val_cs~load_msg_addr();
+            int approval_points = val_cs~load_uint(32);
+            int profit_points = val_cs~load_uint(32);
+
+            cell new_address_cell = 
+                begin_cell()
+                    .store_slice(new_address)
+                    .store_uint(approval_points, 32)
+                    .store_uint(profit_points, 32)
+                .end_cell();
+
+            authorized_addresses~udict_set_get_ref(32, address_index, new_address_cell);
+
+        }
+
+        save_data();
+        return ();
+
+    }
+
     if (op == op::quit_a_dao) {
 
-        int key = in_msg_body~load_uint(32);
+        int address_index = in_msg_body~load_uint(32);
 
         ~strdump("key parsed");
 
-        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, key);
+        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, address_index);
 
         slice val_cs = val.begin_parse();
 
@@ -477,17 +510,13 @@
         int approval_points = val_cs~load_uint(32);
         int profit_points = val_cs~load_uint(32);
 
-        address~dump();
-        approval_points~dump();
-        profit_points~dump();
-
         ~strdump("authorized_address parsed");
 
         if (flag & equal_slices(sender_address, address)) {
 
             ~strdump("Start authorized_address removal");
 
-            (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, key);
+            (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, address_index);
 
             throw_unless(666, flag);
 
@@ -508,9 +537,9 @@
 
     if (op == op::accept_invitation_to_a_dao) {
 
-        int key = in_msg_body~load_uint(32);
+        int address_index = in_msg_body~load_uint(32);
 
-        (cell val, int flag) = pending_invitations.udict_get_ref?(32, key);
+        (cell val, int flag) = pending_invitations.udict_get_ref?(32, address_index);
 
         slice val_cs = val.begin_parse();
 
@@ -520,7 +549,7 @@
 
         if (flag & equal_slices(sender_address, address)) {
 
-            authorized_addresses~udict_set_ref(32, key, val);
+            authorized_addresses~udict_set_ref(32, address_index, val);
 
             total_approval_points += approval_points;
             total_profit_points += profit_points;
@@ -546,7 +575,7 @@
 
         ;; Send invites to A DAO
 
-        (int key, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
+        (int address_index, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
 
         while (flag) {
 
@@ -565,7 +594,7 @@
                     .store_ref(
                         begin_cell()
                             .store_uint(op::invite_to_a_dao, 32)
-                            .store_uint(key, 32)
+                            .store_uint(address_index, 32)
                             .store_uint(approval_points, 32)
                             .store_uint(profit_points, 32)
                         .end_cell()
@@ -574,9 +603,9 @@
 
             send_raw_message(msg, 0);
 
-            key += 1;
+            address_index += 1;
 
-            (val, flag) = pending_invitations.udict_get_ref?(32, key);
+            (val, flag) = pending_invitations.udict_get_ref?(32, address_index);
 
             active? = true;
             

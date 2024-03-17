@@ -11,3 +11,4 @@
     const int op::accept_invitation_to_a_dao = 4;
     const int op::quit_a_dao = 5;
     const int op::invite_to_a_dao = 6;
+    const int op::change_my_address = 7;

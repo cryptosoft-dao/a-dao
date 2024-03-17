@@ -214,4 +214,22 @@ describe('ADaoMinter', () => {
 
     });
 
+    it('Change Wallet0 address to Wallet1 address', async () => {
+
+        const wallet0ChangesAddressToWallet1 = await firstADao.sendChangeMyAddress(wallet0.getSender(), toNano('0.33'), {
+            Key: 0,
+            NewAddress: wallet3.address,
+        })
+
+        expect(wallet0ChangesAddressToWallet1.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ChangeMyAddress,
+            success: true,
+        })
+
+        printTransactionFees(wallet0ChangesAddressToWallet1.transactions);
+
+    });
+
 });

@@ -14,6 +14,7 @@ export const ADaoOperationCodes = {
     AcceptInvitationToADao: 4,
     QuitADao: 5,
     InviteToADao: 6,
+    ChangeMyAddress: 7,
 };
 
 export const ADaoTransactionTypes = {
