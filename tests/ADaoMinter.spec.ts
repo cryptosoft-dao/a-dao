@@ -225,6 +225,10 @@ describe('ADaoMinter', () => {
         expect(ADaoDataAfterWallet2In.total_approval_points).toStrictEqual(BigInt(100));
         expect(ADaoDataAfterWallet2In.total_profit_points).toStrictEqual(BigInt(100));
 
+        // Deploy A Careers
+
+        
+
     });
 
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
@@ -355,6 +359,62 @@ describe('ADaoMinter', () => {
         const ADaoDataAfterWallet0Out = await firstADao.getADaoData();
         expect(ADaoDataAfterWallet0Out.total_approval_points).toStrictEqual(BigInt(100));
         expect(ADaoDataAfterWallet0Out.total_profit_points).toStrictEqual(BigInt(100));
+
+    });
+
+    it('Should Propose Transaction: Delete Address wallet1', async () => {
+
+        const proposeWallet1Delete = await firstADao.sendProposeDeleteAddress(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            AddressToDelete: wallet1.address,
+        })
+
+        expect(proposeWallet1Delete.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet1Delete.transactions);
+
+    });
+
+    it('Should Propose Transaction: Withdraw Profit', async () => {
+
+        const proposeWithdrawProfit = await firstADao.sendProposeWithdrawProfit(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+        })
+
+        expect(proposeWithdrawProfit.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWithdrawProfit.transactions);
+
+    });
+
+    it('Should Propose Transaction: Distribute Ton', async () => {
+
+        const proposeDistributeTon = await firstADao.sendProposeDistributeTon(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            DistributionAmount: toNano(333),
+        })
+
+        expect(proposeDistributeTon.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeDistributeTon.transactions);
 
     });
 

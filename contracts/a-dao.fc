@@ -143,6 +143,50 @@ const int tt::transfer_points = 6;
 
 }
 
+() send_invites_to_a_dao(cell pending_invitations) impure inline {
+
+    ~strdump("Start sending invites to A DAO");
+
+    (int passcode, cell authorized_address_info, int flag) = pending_invitations.udict_get_min_ref?(32);
+
+    while (flag) {
+
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
+        int approval_points = authorized_address_info_cs~load_uint(32);
+        int profit_points = authorized_address_info_cs~load_uint(32);
+
+        cell msg = 
+            begin_cell()
+                .store_uint(0x18, 6)
+                .store_slice(authorized_address)
+                .store_coins(30000000) ;; check on tests
+                .store_uint(1, 107)
+                .store_ref(
+                    begin_cell()
+                        .store_uint(op::invite_to_a_dao, 32)
+                        .store_uint(passcode, 32)
+                        .store_uint(approval_points, 32)
+                        .store_uint(profit_points, 32)
+                    .end_cell()
+                )
+            .end_cell();
+
+        send_raw_message(msg, 0);
+
+        passcode += 1;
+
+        (authorized_address_info, flag) = pending_invitations.udict_get_ref?(32, passcode);
+
+        active? = true;
+        
+    }
+
+    ~strdump("Terminate sending invites to A DAO");
+
+}
+
 () clear_pending_transactions_queue(cell pending_transactions) inline {
 
     (int key, slice transaction_info, int success?) = pending_transactions.udict_get_min?(256);
@@ -153,10 +197,6 @@ const int tt::transfer_points = 6;
         transaction_info~skip_bits(8); ;; skip transaction_type
         transaction_info~load_uint(32); ;; deadline
     }
-
-}
-
-() send_invites_to_a_dao(cell pending_invitations) impure inline {
 
 }
 
@@ -765,45 +805,7 @@ const int tt::transfer_points = 6;
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
 
-        ~strdump("Start sending invites to A DAO");
-
-        (int passcode, cell authorized_address_info, int flag) = pending_invitations.udict_get_min_ref?(32);
-
-        while (flag) {
-
-            slice authorized_address_info_cs = authorized_address_info.begin_parse();
-
-            slice authorized_address = authorized_address_info_cs~load_msg_addr();
-            int approval_points = authorized_address_info_cs~load_uint(32);
-            int profit_points = authorized_address_info_cs~load_uint(32);
-
-            cell msg = 
-                begin_cell()
-                    .store_uint(0x18, 6)
-                    .store_slice(authorized_address)
-                    .store_coins(30000000) ;; check on tests
-                    .store_uint(1, 107)
-                    .store_ref(
-                        begin_cell()
-                            .store_uint(op::invite_to_a_dao, 32)
-                            .store_uint(passcode, 32)
-                            .store_uint(approval_points, 32)
-                            .store_uint(profit_points, 32)
-                        .end_cell()
-                    )
-                .end_cell();
-
-            send_raw_message(msg, 0);
-
-            passcode += 1;
-
-            (authorized_address_info, flag) = pending_invitations.udict_get_ref?(32, passcode);
-
-            active? = true;
-            
-        }
-
-        ~strdump("Terminate sending invites to A DAO");
+        send_invites_to_a_dao(pending_invitations);
 
         save_data();
         return ();
