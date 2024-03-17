@@ -101,8 +101,8 @@ describe('ADaoMinter', () => {
         const ProfitableAddresses = beginCell().storeDictDirect(ProfitableAddressesDict, Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()).endCell();
 
         const PendingInvitationsDict = Dictionary.empty<bigint, Cell>();
-        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(10 ,32).storeUint(10, 32).endCell());
-        PendingInvitationsDict.set(BigInt(1), beginCell().storeAddress(wallet1.address).storeUint(20 ,32).storeUint(20, 32).endCell());
+        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(7 ,32).storeUint(10, 32).endCell());
+        PendingInvitationsDict.set(BigInt(1), beginCell().storeAddress(wallet1.address).storeUint(21 ,32).storeUint(19, 32).endCell());
         const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
         const ADaoMinterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
@@ -129,7 +129,7 @@ describe('ADaoMinter', () => {
                 beginCell()
                     .storeUint(ADaoOperationCodes.InviteToADao, 32)
                     .storeUint(0, 32)
-                    .storeUint(10, 32)
+                    .storeUint(7, 32)
                     .storeUint(10, 32)
                 .endCell(),
         });
@@ -143,8 +143,8 @@ describe('ADaoMinter', () => {
                 beginCell()
                     .storeUint(ADaoOperationCodes.InviteToADao, 32)
                     .storeUint(1, 32)
-                    .storeUint(20, 32)
-                    .storeUint(20, 32)
+                    .storeUint(21, 32)
+                    .storeUint(19, 32)
                 .endCell(),
         });
 
@@ -156,7 +156,7 @@ describe('ADaoMinter', () => {
         // Wallet0 accepts invitation to A DAO
 
         const wallet0AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet0.getSender(), toNano('0.33'), {
-            Key: 0,
+            Passcode: 0,
         })
 
         expect(wallet0AcceptsInvitation.transactions).toHaveTransaction({
@@ -169,13 +169,13 @@ describe('ADaoMinter', () => {
         printTransactionFees(wallet0AcceptsInvitation.transactions);
 
         const ADaoDataAfterWallet0In = await firstADao.getADaoData();
-        expect(ADaoDataAfterWallet0In.total_approval_points).toStrictEqual(BigInt(10));
+        expect(ADaoDataAfterWallet0In.total_approval_points).toStrictEqual(BigInt(7));
         expect(ADaoDataAfterWallet0In.total_profit_points).toStrictEqual(BigInt(10));
         
         // Wallet1 accepts invitation to A DAO
 
         const wallet1AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet1.getSender(), toNano('0.33'), {
-            Key: 1
+            Passcode: 1
         })
 
         expect(wallet1AcceptsInvitation.transactions).toHaveTransaction({
@@ -188,15 +188,15 @@ describe('ADaoMinter', () => {
         printTransactionFees(wallet1AcceptsInvitation.transactions);
 
         const ADaoDataAfterWallet1In = await firstADao.getADaoData();
-        expect(ADaoDataAfterWallet1In.total_approval_points).toStrictEqual(BigInt(30));
-        expect(ADaoDataAfterWallet1In.total_profit_points).toStrictEqual(BigInt(30));
+        expect(ADaoDataAfterWallet1In.total_approval_points).toStrictEqual(BigInt(28));
+        expect(ADaoDataAfterWallet1In.total_profit_points).toStrictEqual(BigInt(29));
 
     });
 
     it('Wallet0 should quit A DAO', async () => {
 
         const wallet0QuitsADao = await firstADao.sendQuitADao(wallet0.getSender(), toNano('0.33'), {
-            Key: 0,
+            Passcode: 0,
         })
 
         expect(wallet0QuitsADao.transactions).toHaveTransaction({
@@ -209,26 +209,61 @@ describe('ADaoMinter', () => {
         printTransactionFees(wallet0QuitsADao.transactions);
 
         const ADaoDataAfterWallet0Out = await firstADao.getADaoData();
-        expect(ADaoDataAfterWallet0Out.total_approval_points).toStrictEqual(BigInt(20));
-        expect(ADaoDataAfterWallet0Out.total_profit_points).toStrictEqual(BigInt(20));
+        expect(ADaoDataAfterWallet0Out.total_approval_points).toStrictEqual(BigInt(21));
+        expect(ADaoDataAfterWallet0Out.total_profit_points).toStrictEqual(BigInt(19));
 
     });
 
-    it('Change Wallet0 address to Wallet1 address', async () => {
+    it('Change Wallet1 address to Wallet3 address and change back', async () => {
 
-        const wallet0ChangesAddressToWallet1 = await firstADao.sendChangeMyAddress(wallet0.getSender(), toNano('0.33'), {
-            Key: 0,
+        const wallet1ChangesAddressToWallet2 = await firstADao.sendChangeMyAddress(wallet1.getSender(), toNano('0.33'), {
+            Passcode: 1,
             NewAddress: wallet3.address,
         })
 
-        expect(wallet0ChangesAddressToWallet1.transactions).toHaveTransaction({
-            from: wallet0.address,
+        expect(wallet1ChangesAddressToWallet2.transactions).toHaveTransaction({
+            from: wallet1.address,
             to: firstADao.address,
             op: ADaoOperationCodes.ChangeMyAddress,
             success: true,
         })
 
-        printTransactionFees(wallet0ChangesAddressToWallet1.transactions);
+        printTransactionFees(wallet1ChangesAddressToWallet2.transactions);
+
+        const wallet3ChangesAddressToWallet1 = await firstADao.sendChangeMyAddress(wallet3.getSender(), toNano('0.33'), {
+            Passcode: 1,
+            NewAddress: wallet1.address,
+        })
+
+        expect(wallet3ChangesAddressToWallet1.transactions).toHaveTransaction({
+            from: wallet3.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ChangeMyAddress,
+            success: true,
+        })
+
+        printTransactionFees(wallet3ChangesAddressToWallet1.transactions);
+
+    });
+
+    it('Should Propose Transaction: Invite Address wallet0', async () => {
+
+        const proposeWallet0Invitation = await firstADao.sendProposeInviteAddress(wallet1.getSender(), toNano('0.33'), {
+            Passcode: 1,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            AddressToInvite: wallet3.address,
+            ApprovalPoints: BigInt(13),
+            ProfitPoints: BigInt(11),
+        })
+
+        expect(proposeWallet0Invitation.transactions).toHaveTransaction({
+            from: wallet1.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet0Invitation.transactions);
 
     });
 

@@ -35,9 +35,10 @@ export type ADaoData = {
 
 export type ADaoConfig = {
     Active: number;
-    RootAddress: Address,
-    DeployerAddressSHA256: bigint,
+    RootAddress: Address;
+    DeployerAddressSHA256: bigint;
 }
+
 export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     return beginCell()
         .storeUint(config.Active, 1) // false value
@@ -137,7 +138,7 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Key: bigint | number,
+            Passcode: bigint | number,
         }
     ) {
         await provider.internal(via, {
@@ -146,7 +147,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.AcceptInvitationToADao, 32)
-                    .storeUint(opts.Key, 32)
+                    .storeUint(opts.Passcode, 32)
                 .endCell()
         });
     }
@@ -156,7 +157,7 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Key: bigint | number,
+            Passcode: bigint | number,
         }
     ) {
         await provider.internal(via, {
@@ -165,7 +166,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.QuitADao, 32)
-                    .storeUint(opts.Key, 32)
+                    .storeUint(opts.Passcode, 32)
                 .endCell()
         });
     }
@@ -175,7 +176,7 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Key: bigint | number,
+            Passcode: number | bigint,
             NewAddress: Address,
         }
     ) {
@@ -185,7 +186,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ChangeMyAddress, 32)
-                    .storeUint(opts.Key, 32)
+                    .storeUint(opts.Passcode, 32)
                     .storeAddress(opts.NewAddress)
                 .endCell()
         });
@@ -198,12 +199,12 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            TransactionType: bigint | number;
-            Deadline: bigint | number;
+            Passcode: number | bigint,
+            Deadline: number | bigint,
             // cell transaction_info
-            AddressToInvite: Address;
-            ApprovalPoints: bigint | number;
-            ProfitPoints: bigint | number;
+            AddressToInvite: Address,
+            ApprovalPoints: number | bigint,
+            ProfitPoints: number | bigint,
         }
     ) {
         await provider.internal(via, {
@@ -212,11 +213,12 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.TransactionType, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.InviteAddress, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
-                            .storeUint(ADaoTransactionTypes.InviteAddress, 4)
+                            .storeAddress(opts.AddressToInvite)
                             .storeUint(opts.ApprovalPoints, 32)
                             .storeUint(opts.ProfitPoints, 32)
                     )
@@ -262,9 +264,24 @@ export class ADao implements Contract {
     // Approve transaction
 
     async sendApproveInviteAddress(
-
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            TransactionIndex: number | bigint,
+        }
     ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ApproveTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(opts.TransactionIndex, 32)
+                .endCell()
+        });
     }
 
     async sendApproveDeleteAddress(

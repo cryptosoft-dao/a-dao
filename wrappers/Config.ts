@@ -22,6 +22,6 @@ export const ADaoTransactionTypes = {
     DeleteAddress: 1,
     DestributeTon: 2,
     ArbitraryTransaction: 3,
-    UpdateAgreementPercent: 4
+    UpdateAgreementPercent: 4,
 }
 

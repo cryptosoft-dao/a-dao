@@ -19,18 +19,18 @@
     global int profit_reserve_percent_denominator; ;; int32
     ;; udict profitable_addresses
         ;; Key: uint256 hash(address)
-        ;; Value: slice profitable_address
+        ;; value: slice profitable_address
     global cell profitable_addresses;
     ;; udict pending_invitations
         ;; Key: uint32
-        ;; Value
+        ;; value
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
     global cell pending_invitations; ;; on activation
     ;; udict pending_transactions
         ;; Key: uint32
-        ;; Value (cell)
+        ;; value (cell)
             ;; int4 transaction_type
             ;; int32 deadline
             ;; cell transaction_info
@@ -39,7 +39,7 @@
     global cell pending_transactions;
     ;; udict authorized_addresses
         ;; Key: uint256 hash(address)
-        ;; Value (Slice)
+        ;; value (Slice)
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
@@ -126,20 +126,15 @@
 
 () clear_pending_transactions_queue(cell pending_transactions) inline {
 
-    (int key, slice value, int success?) = pending_transactions.udict_get_min?(256);
+    (int key, slice transaction_info, int success?) = pending_transactions.udict_get_min?(256);
 
     while (success?) {
-        (key, value, success?) = pending_transactions.udict_get_next?(256, key);
+        (key, transaction_info, success?) = pending_transactions.udict_get_next?(256, key);
 
-        value~skip_bits(8); ;; skip transaction_type
-        value~load_uint(32); ;; deadline
+        transaction_info~skip_bits(8); ;; skip transaction_type
+        transaction_info~load_uint(32); ;; deadline
     }
 
-}
-
-(int) check_authority(slice sender_address) inline {
-    (_, _, _, int success?) = authorized_addresses.pfxdict_get?(sender_address.slice_bits(), sender_address);
-    return success?;
 }
 
 () send_invites_to_a_dao(cell pending_invitations) impure inline {
@@ -168,13 +163,13 @@
 
         ;; Check if sender is an authorized routing pool wallet
 
-        int address_index = in_msg_body~load_uint(8);
+        int passcode = in_msg_body~load_uint(8);
         int transaction_index = in_msg_body~load_uint(8);
 
         ;; get transaction by transaction_index
 
-        (slice transaction, int found?) = pending_transactions.udict_get?(8, transaction_index);
-        throw_unless(200, found?);
+        (slice transaction, int flag) = pending_transactions.udict_get?(32, transaction_index);
+        throw_unless(200, flag);
 
         ;; Parse transaction
 
@@ -186,16 +181,16 @@
 
         ;; add approve
 
-        int success? = approves~udict_add?(8, address_index, transaction);
+        int success? = approves~udict_add?(8, passcode, transaction);
 
         ;; get info about address from authorized_addresses
 
-        (slice address_info, int success?) = authorized_addresses.udict_get?(8, address_index);
+        (slice authorized_address_info, int success?) = authorized_addresses.udict_get?(8, passcode);
         throw_unless(111, success?); ;; throw if there is not such a address
 
-        slice address = address_info~load_msg_addr();
-        int approval_points = address_info~load_uint(32);
-        int profit_points = address_info~load_uint(32);
+        slice address = authorized_address_info~load_msg_addr();
+        int approval_points = authorized_address_info~load_uint(32);
+        int profit_points = authorized_address_info~load_uint(32);
 
         ;; Calculate new total transaction
 
@@ -213,8 +208,8 @@
 
             if (transaction_type == tt::invite_address) {
 
-                (int last_address_index, _, _) = pending_transactions.udict_get_max?(8);
-                int new_address_index = last_address_index + 1;
+                (int last_passcode, _, _) = pending_transactions.udict_get_max?(8);
+                int new_passcode = last_passcode + 1;
 
                 transaction_info_cs~load_msg_addr(); ;; slice address_to_add_addr
                 int approval_points = transaction_info_cs~load_uint(32);
@@ -222,7 +217,7 @@
 
                 ;; Add new address to dict
 
-                authorized_addresses~udict_add?(8, new_address_index, transaction_info_cs);
+                authorized_addresses~udict_add?(8, new_passcode, transaction_info_cs);
 
                 ;; Increase total approves
 
@@ -256,13 +251,13 @@
 
                 ;; Route ton
 
-                (int key, slice value, int success?) = authorized_addresses.udict_get_min?(64);
+                (int key, slice authorized_address_info, int success?) = authorized_addresses.udict_get_min?(64);
 
                 while (success?) {
 
-                    slice address = address_info~load_msg_addr();
-                    int approval_points = address_info~load_uint(32);
-                    int profit_points = address_info~load_uint(32);
+                    slice address = authorized_address_info~load_msg_addr();
+                    int approval_points = authorized_address_info~load_uint(32);
+                    int profit_points = authorized_address_info~load_uint(32);
 
                     int ton_amount_to_address = ton_to_route / total_profit_points * profit_points;
                 
@@ -349,23 +344,42 @@
 
     }
 
-    ;; start transaction msg: int address_index, int transaction_index, cell transaction_cell
+    ;; start transaction msg: int passcode, int transaction_index, cell transaction_cell
 
     if (op == op::propose_transaction) {
 
+        ~strdump("Start transaction proposal");
+
         ;; Check if sender is an authorized routing pool wallet
 
-        int address_index = 
+        int passcode = in_msg_body~load_uint(32);
 
-        check_authority(sender_address);
+        ~strdump("Start proposal initiator authorization");
 
-        int transaction_type = in_msg_body.preload_uint(4);
+        (cell authorized_address_info, int success?) = authorized_addresses.udict_get_ref?(32, passcode);
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
+        throw_unless(222, success? & equal_slices(sender_address, authorized_address));
+
+        ~strdump("Start proposal parsing");
+
+        int transaction_type = in_msg_body.preload_uint(32);
         int deadline = in_msg_body.preload_uint(32);
         cell transaction_info = in_msg_body.preload_ref();
 
-        (int transaction_index, _, _) = pending_transactions.udict_get_max?(32);
+        ~strdump("Get max pending_transactions index");
+
+        (int transaction_index, _, int flag) = pending_transactions.udict_get_max?(32);
+
+        if (~ flag) {
+            transaction_index = 0;
+        }
+
+        ~strdump("Convert transaction_info to slice");
 
         slice transaction_info_cs = transaction_info.begin_parse();
+
+        ~strdump("Set zero approves");
 
         cell approves = new_dict();
         int approve_points = 0;
@@ -375,13 +389,23 @@
 
         if (transaction_type == tt::invite_address) {
 
-            ;; Check transaction_info for initiating adding address
+            ~strdump("Start Transaction Type: Invite Address");
 
             transaction_info_cs~load_msg_addr(); ;; slice address_to_invite
             transaction_info_cs~load_uint(32); ;; int approval_points
             transaction_info_cs~load_uint(32); ;; int profit_points
 
-            pending_transactions.udict_add?(32, transaction_index, begin_cell().store_slice(in_msg_body).store_dict(approves).store_uint(approve_points, 32).end_cell().begin_parse());
+            ~strdump("Add transaction to pending_transactions");
+
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_slice(in_msg_body)
+                    .store_dict(approves)
+                    .store_uint(approve_points, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();
@@ -397,7 +421,15 @@
 
             transaction_info_cs~load_msg_addr(); ;; slice address_to_eliminate_addr
 
-            pending_transactions.udict_add?(10, transaction_index, in_msg_body);
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_slice(in_msg_body)
+                    .store_dict(approves)
+                    .store_uint(approve_points, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();
@@ -413,7 +445,15 @@
 
             transaction_info_cs~load_uint(32); ;; int amount
 
-            pending_transactions.udict_add?(10, transaction_index, in_msg_body);
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_slice(in_msg_body)
+                    .store_dict(approves)
+                    .store_uint(approve_points, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();
@@ -435,7 +475,15 @@
 
             throw_if(666, amount > my_balance - total_profit_reserved);
 
-            pending_transactions.udict_add?(10, transaction_index, in_msg_body);
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_slice(in_msg_body)
+                    .store_dict(approves)
+                    .store_uint(approve_points, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();
@@ -452,7 +500,15 @@
             agreement_percent_numerator = transaction_info_cs~load_uint(32); ;; agreement_percent_numerator
             agreement_percent_denominator = transaction_info_cs~load_uint(32); ;; agreement_percent_denominator
 
-            pending_transactions.udict_add?(10, transaction_index, in_msg_body);
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_slice(in_msg_body)
+                    .store_dict(approves)
+                    .store_uint(approve_points, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();
@@ -460,6 +516,10 @@
         }
 
         if (transaction_type == tt::transfer_points) {
+
+            ;; Add address with part of the poins of change address in case of all points transfer
+
+            save_data();
             return ();
         }
 
@@ -467,27 +527,31 @@
 
     if (op == op::change_my_address) {
 
-        int address_index = in_msg_body~load_uint(32);
-        slice new_address = in_msg_body~load_msg_addr();
+        ~strdump("Start changing my address");
 
-        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, address_index);
+        int passcode = in_msg_body~load_uint(32);
+        slice new_authorized_address = in_msg_body~load_msg_addr();
+        (cell authorized_address_info, int flag) = authorized_addresses.udict_get_ref?(32, passcode);
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
 
-        if (flag) {
+        if (flag & equal_slices(sender_address, authorized_address)) {
 
-            slice val_cs = val.begin_parse();
+            ~strdump("Sender authorized");
 
-            slice address = val_cs~load_msg_addr();
-            int approval_points = val_cs~load_uint(32);
-            int profit_points = val_cs~load_uint(32);
+            int approval_points = authorized_address_info_cs~load_uint(32);
+            int profit_points = authorized_address_info_cs~load_uint(32);
 
-            cell new_address_cell = 
+            ~strdump("Start authorized_address update");
+
+            cell new_authorized_authorized_address_info = 
                 begin_cell()
-                    .store_slice(new_address)
+                    .store_slice(new_authorized_address)
                     .store_uint(approval_points, 32)
                     .store_uint(profit_points, 32)
                 .end_cell();
 
-            authorized_addresses~udict_set_get_ref(32, address_index, new_address_cell);
+            authorized_addresses~udict_set_get_ref(32, passcode, new_authorized_authorized_address_info);
 
         }
 
@@ -498,29 +562,26 @@
 
     if (op == op::quit_a_dao) {
 
-        int address_index = in_msg_body~load_uint(32);
+        ~strdump("Start quiting A DAO");
 
-        ~strdump("key parsed");
+        int passcode = in_msg_body~load_uint(32);
+        (cell authorized_address_info, int flag) = authorized_addresses.udict_get_ref?(32, passcode);
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
 
-        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, address_index);
+        if (flag & equal_slices(sender_address, authorized_address)) {
 
-        slice val_cs = val.begin_parse();
+            ~strdump("Sender authorized");
 
-        slice address = val_cs~load_msg_addr();
-        int approval_points = val_cs~load_uint(32);
-        int profit_points = val_cs~load_uint(32);
-
-        ~strdump("authorized_address parsed");
-
-        if (flag & equal_slices(sender_address, address)) {
+            int approval_points = authorized_address_info_cs~load_uint(32);
+            int profit_points = authorized_address_info_cs~load_uint(32);
 
             ~strdump("Start authorized_address removal");
 
-            (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, address_index);
-
+            (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, passcode);
             throw_unless(666, flag);
 
-            ~strdump("End authorized_address removal");
+            ~strdump("Start points update");
 
             total_approval_points -= approval_points;
             total_profit_points -= profit_points;
@@ -537,22 +598,31 @@
 
     if (op == op::accept_invitation_to_a_dao) {
 
-        int address_index = in_msg_body~load_uint(32);
+        ~strdump("Start accepting invitation to A DAO");
 
-        (cell val, int flag) = pending_invitations.udict_get_ref?(32, address_index);
+        int passcode = in_msg_body~load_uint(32);
+        (cell authorized_address_info, int flag) = pending_invitations.udict_get_ref?(32, passcode);
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
 
-        slice val_cs = val.begin_parse();
+        if (flag & equal_slices(sender_address, authorized_address)) {
 
-        slice address = val_cs~load_msg_addr();
-        int approval_points = val_cs~load_uint(32);
-        int profit_points = val_cs~load_uint(32);
+            ~strdump("Sender authorized");
 
-        if (flag & equal_slices(sender_address, address)) {
+            int approval_points = authorized_address_info_cs~load_uint(32);
+            int profit_points = authorized_address_info_cs~load_uint(32);
 
-            authorized_addresses~udict_set_ref(32, address_index, val);
+            ~strdump("End authorized_address adding");
+
+            authorized_addresses~udict_set_ref(32, passcode, authorized_address_info);
+
+            ~strdump("Start points update");
 
             total_approval_points += approval_points;
             total_profit_points += profit_points;
+
+            total_approval_points~dump();
+            total_profit_points~dump();
 
         }
 
@@ -562,6 +632,8 @@
     }
 
     if (op == op::activate_a_dao) {
+
+        ~strdump("Start A DAO Activation");
 
         throw_unless(333, equal_slices(sender_address, deployer_address));
 
@@ -573,28 +645,28 @@
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
 
-        ;; Send invites to A DAO
+        ~strdump("Start sending invites to A DAO");
 
-        (int address_index, cell val, int flag) = pending_invitations.udict_get_min_ref?(32);
+        (int passcode, cell authorized_address_info, int flag) = pending_invitations.udict_get_min_ref?(32);
 
         while (flag) {
 
-            slice val_cs = val.begin_parse();
+            slice authorized_address_info_cs = authorized_address_info.begin_parse();
 
-            slice address = val_cs~load_msg_addr();
-            int approval_points = val_cs~load_uint(32);
-            int profit_points = val_cs~load_uint(32);
+            slice authorized_address = authorized_address_info_cs~load_msg_addr();
+            int approval_points = authorized_address_info_cs~load_uint(32);
+            int profit_points = authorized_address_info_cs~load_uint(32);
 
             cell msg = 
                 begin_cell()
                     .store_uint(0x18, 6)
-                    .store_slice(address)
+                    .store_slice(authorized_address)
                     .store_coins(30000000) ;; check on tests
                     .store_uint(1, 107)
                     .store_ref(
                         begin_cell()
                             .store_uint(op::invite_to_a_dao, 32)
-                            .store_uint(address_index, 32)
+                            .store_uint(passcode, 32)
                             .store_uint(approval_points, 32)
                             .store_uint(profit_points, 32)
                         .end_cell()
@@ -603,13 +675,15 @@
 
             send_raw_message(msg, 0);
 
-            address_index += 1;
+            passcode += 1;
 
-            (val, flag) = pending_invitations.udict_get_ref?(32, address_index);
+            (authorized_address_info, flag) = pending_invitations.udict_get_ref?(32, passcode);
 
             active? = true;
             
         }
+
+        ~strdump("Terminate sending invites to A DAO");
 
         save_data();
         return ();
@@ -619,6 +693,8 @@
     ;; Internal method of protocol
 
     if (op == op::process_deploy_message) {
+
+        ~strdump("Start deploy message processing");
 
         throw_unless(666, equal_slices(sender_address, root_address));
         transaction_fee = in_msg_body~load_uint(32);
@@ -652,11 +728,6 @@
 }
 
 ;; Custom get-methods
-
-int get_a_dao_status() {
-    load_data();
-    return active?;
-}
 
 (int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
 
