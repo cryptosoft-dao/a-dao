@@ -474,14 +474,23 @@
         int key = in_msg_body~load_uint(32);
 
         (cell val, int flag) = pending_invitations.udict_get_ref?(32, key);
+
         slice val_cs = val.begin_parse();
 
-        if (flag & equal_slices(sender_address, val_cs~load_msg_addr())) {
+        slice address = val_cs~load_msg_addr();
+        int approval_points = val_cs~load_uint(32);
+        int profit_points = val_cs~load_uint(32);
+
+        if (flag & equal_slices(sender_address, address)) {
 
             authorized_addresses.udict_set_ref(32, key, val);
 
+            total_approval_points += approval_points;
+            total_profit_points += profit_points;
+
         }
 
+        save_data();
         return ();
 
     }

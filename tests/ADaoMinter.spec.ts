@@ -1,10 +1,9 @@
-import { Blockchain, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
+import { Blockchain, BlockchainSnapshot, internal, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
 import { Address, beginCell, Cell, Dictionary, Slice, toNano, TransactionDescriptionGeneric } from '@ton/core';
 import { ADaoMinter } from '../wrappers/ADaoMinter';
 import { ADao } from '../wrappers/ADao';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
-import { profile } from 'console';
 import { ADaoOperationCodes } from '../wrappers/Config';
 
 describe('ADaoMinter', () => {
@@ -81,6 +80,9 @@ describe('ADaoMinter', () => {
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
+        const ADaoDataBeforeActivation = await firstADao.getADaoData();
+        expect(ADaoDataBeforeActivation.active).toStrictEqual(0);
+
         /*
 
         blockchain.setVerbosityForAddress(firstADao.address, {
@@ -148,6 +150,9 @@ describe('ADaoMinter', () => {
 
         printTransactionFees(ADaoMinterActivationResult.transactions);
 
+        const ADaoDataAfterActivation = await firstADao.getADaoData();
+        expect(ADaoDataAfterActivation.active).toStrictEqual(1);
+
         // Wallet0 accepts invitation to A DAO
 
         const wallet0AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet0.getSender(), toNano('0.33'), {
@@ -162,7 +167,7 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(wallet0AcceptsInvitation.transactions);
-
+        
         // Wallet1 accepts invitation to A DAO
 
         const wallet1AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet1.getSender(), toNano('0.33'), {
@@ -180,8 +185,20 @@ describe('ADaoMinter', () => {
 
     });
 
-    it('should deploy', async () => {
-        // the check is done inside beforeEach
-        // blockchain and ADaoMinter are ready to use
+    it('Wallet0 should quit A DAO', async () => {
+
+        const wallet0QuitsADao = await firstADao.sendQuitADao(wallet0.getSender(), toNano('0.33'), {
+            Key: 0,
+        })
+
+        expect(wallet0QuitsADao.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.QuitADao,
+            success: true,
+        })
+
+        printTransactionFees(wallet0QuitsADao.transactions);
+
     });
 });
