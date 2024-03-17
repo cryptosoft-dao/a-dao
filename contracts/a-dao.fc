@@ -1,6 +1,25 @@
 #include "stdlib.fc";
-#include "op.fc";
-#include "transactions_types.fc";
+
+;; Operation Codes
+
+const int op::process_deploy_message = 0;
+const int op::activate_a_dao = 1;
+const int op::propose_transaction = 2;
+const int op::approve_transaction = 3;
+const int op::accept_invitation_to_a_dao = 4;
+const int op::quit_a_dao = 5;
+const int op::invite_to_a_dao = 6;
+const int op::change_my_address = 7;
+
+;; Transaction Types
+
+const int tt::invite_address = 0;
+const int tt::delete_address = 1;
+const int tt::withdraw_profit = 2;
+const int tt::distribute_ton = 3;
+const int tt::arbitrary_transaction = 4;
+const int tt::update_agreement_percent = 5;
+const int tt::transfer_points = 6;
 
 ;; Storage globals
 
@@ -222,7 +241,7 @@
 
             if (transaction_type == tt::invite_address) {
 
-                ~strdump("Start Transaction Type: Invite Address");
+                ~strdump("Start Transaction Approval: Invite Address");
 
                 (int last_passcode, _, _) = pending_invitations.udict_get_max_ref?(32);
                 int passcode = last_passcode + 1;
@@ -262,6 +281,8 @@
 
             if (transaction_type == tt::delete_address) {
 
+                ~strdump("Start Transaction Approval: Delete Address");
+
                 int address_to_delete_index = transaction_info_cs~load_uint(8);
 
                 ;; Delete address from dict
@@ -277,7 +298,33 @@
 
             }
 
-            if (transaction_type == tt::withdraw_profit) {
+            ;; Send transaction to dApp for profit withdrawal
+
+            if (transaction_type = tt::withdraw_profit) {
+
+                ~strdump("Start Transaction Approval: Withdraw Profit");
+
+                slice profitable_address = transaction_info_cs~load_msg_addr();
+
+                var msg = begin_cell()
+                    .store_uint(0x18, 6)
+                    .store_slice(profitable_address)
+                    .store_coins(330000000)
+                    .store_uint(1, 107)
+                    .store_ref(
+                        begin_cell()
+                            .store_uint(48, 32) ;; int32 op::withdraw_funds
+                        .end_cell()
+                    )
+                .end_cell();
+
+                send_raw_message(msg, 0);
+
+            }
+
+            if (transaction_type == tt::distribute_ton) {
+
+                ~strdump("Start Transaction Approval: Distribute Ton");
 
                 int ton_to_route = transaction_info_cs~load_uint(32); ;; int amount
 
@@ -307,29 +354,9 @@
 
             }
 
-            ;; Send transaction to dApp for profit withdrawal
-
-            if (transaction_type = tt::withdraw_profit) {
-
-                slice profitable_address = transaction_info_cs~load_msg_addr();
-
-                var msg = begin_cell()
-                    .store_uint(0x18, 6)
-                    .store_slice(profitable_address)
-                    .store_coins(330000000)
-                    .store_uint(1, 107)
-                    .store_ref(
-                        begin_cell()
-                            .store_uint(48, 32) ;; int32 op::withdraw_funds
-                        .end_cell()
-                    )
-                .end_cell();
-
-                send_raw_message(msg, 0);
-
-            }
-
             if (transaction_type == tt::arbitrary_transaction) {
+
+                ~strdump("Start Transaction Approval: Arbitrary Transaction");
 
                 slice destination = transaction_info_cs~load_msg_addr(); ;; destination
                 int amount = transaction_info_cs~load_uint(32); ;; amount
@@ -357,6 +384,8 @@
 
             if (transaction_type == tt::update_agreement_percent) {
 
+                ~strdump("Start Transaction Approval: Update Agreement Percent");
+
                 agreement_percent_numerator = transaction_info_cs~load_uint(32); ;; parse and save new settings
                 agreement_percent_denominator = transaction_info_cs~load_uint(32);
 
@@ -366,6 +395,8 @@
             }
 
             if (transaction_type == tt::transfer_points) {
+
+                ~strdump("Start Transaction Approval: Transfer Points");
 
                 save_data();
                 return ();
@@ -433,12 +464,9 @@
         cell approves = new_dict();
         int approval_points_recieved = 0;
 
-        ;; Index 0: Add address
-        ;; transaction_info: slice address_to_add_addr
-
         if (transaction_type == tt::invite_address) {
 
-            ~strdump("Start Transaction Type: Invite Address");
+            ~strdump("Start Proposal: Invite Address");
 
             transaction_info_cs~load_msg_addr(); ;; slice address_to_invite
             transaction_info_cs~load_uint(32); ;; int approval_points
@@ -463,20 +491,21 @@
 
         }
 
-        ;; Index 1: Eliminate address
-        ;; transaction_info: slice address_to_eliminate_addr
-
         if (transaction_type == tt::delete_address) {
 
-            ;; Check transaction_info for initiating termination of authority
+            ~strdump("Start Transaction Proposal: Delete Address");
 
             transaction_info_cs~load_msg_addr(); ;; slice address_to_eliminate_addr
 
+            ~strdump("Add transaction to pending_transactions");
+
             pending_transactions~udict_set_ref(
                 32, 
                 transaction_index, 
                 begin_cell()
-                    .store_slice(in_msg_body)
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
                     .store_dict(approves)
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
@@ -486,21 +515,19 @@
             return ();
 
         }
-
-        ;; Index 2: ton routing transaction
-        ;; transaction_info: int amount
 
         if (transaction_type == tt::withdraw_profit) {
 
-            ;; Check transaction_info for initiating ton routing
-
-            transaction_info_cs~load_uint(32); ;; int amount
+            ~strdump("Start Transaction Proposal: Withdraw Profit");
+            ~strdump("Add transaction to pending_transactions");
 
             pending_transactions~udict_set_ref(
                 32, 
                 transaction_index, 
                 begin_cell()
-                    .store_slice(in_msg_body)
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
                     .store_dict(approves)
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
@@ -511,26 +538,49 @@
 
         }
 
-        ;; Index 3: Arbitrary transtransaction
-        ;; transaction_info: slice destination, int amount, cell msg_body
+        if (transaction_type == tt::distribute_ton) {
 
-        ;; !!!!!! rework
+            ~strdump("Start Transaction Proposal: Distribute Ton");
+
+            transaction_info_cs~load_coins(); ;; int distribution_amount
+
+            ~strdump("Add transaction to pending_transactions");
+
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
+                    .store_dict(approves)
+                    .store_uint(approval_points_recieved, 32)
+                .end_cell()
+            );
+
+        }
 
         if (transaction_type == tt::arbitrary_transaction) {
 
-            ;; Check transaction_info for proposing arbitrary transtransaction
+            ~strdump("Start Transaction Proposal: Arbitrary Transaction");
 
             transaction_info_cs~load_msg_addr(); ;; destination
-            int amount = transaction_info_cs~load_uint(32); ;; amount
+            int amount = transaction_info_cs~load_coins(); ;; amount
             transaction_info_cs~load_ref(); ;; msg_body
 
+            ~strdump("Check the integrity of reserves");
+
             throw_if(666, amount > my_balance - total_profit_reserved);
+
+            ~strdump("Add transaction to pending_transactions");
 
             pending_transactions~udict_set_ref(
                 32, 
                 transaction_index, 
                 begin_cell()
-                    .store_slice(in_msg_body)
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
                     .store_dict(approves)
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
@@ -541,21 +591,22 @@
 
         }
 
-        ;; Index 4: start change settings
-        ;; transaction_info: 
-
         if (transaction_type == tt::update_agreement_percent) {
 
-            ;; Check transaction_info for proposing of changing of transaction approval percent
+            ~strdump("Start Transaction Proposal: Update Agreement Percent");
 
-            agreement_percent_numerator = transaction_info_cs~load_uint(32); ;; agreement_percent_numerator
-            agreement_percent_denominator = transaction_info_cs~load_uint(32); ;; agreement_percent_denominator
+            transaction_info_cs~load_uint(32); ;; int agreement_percent_numerator
+            transaction_info_cs~load_uint(32); ;; int agreement_percent_denominator
+
+            ~strdump("Add transaction to pending_transactions");
 
             pending_transactions~udict_set_ref(
                 32, 
                 transaction_index, 
                 begin_cell()
-                    .store_slice(in_msg_body)
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
                     .store_dict(approves)
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
@@ -568,7 +619,25 @@
 
         if (transaction_type == tt::transfer_points) {
 
-            ;; Add address with part of the poins of change address in case of all points transfer
+            ~strdump("Start Transaction Proposal: Transfer Points");
+
+            transaction_info_cs~load_msg_addr(); ;; slice destination
+            transaction_info_cs~load_uint(32); ;; int approval_points
+            transaction_info_cs~load_uint(32); ;; int profit_points
+
+            ~strdump("Add transaction to pending_transactions");
+
+            pending_transactions~udict_set_ref(
+                32, 
+                transaction_index, 
+                begin_cell()
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
+                    .store_dict(approves)
+                    .store_uint(approval_points_recieved, 32)
+                .end_cell()
+            );
 
             save_data();
             return ();

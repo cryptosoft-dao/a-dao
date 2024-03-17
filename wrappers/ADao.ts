@@ -228,38 +228,180 @@ export class ADao implements Contract {
     }
 
     async sendProposeDeleteAddress(
-        
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+            // cell transaction_info
+            AddressToDelete: Address,
+        }
     ) {
-
-    }
-    async sendProposeDistributeTon(
-        
-    ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.DeleteAddress, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeAddress(opts.AddressToDelete)
+                        .endCell()
+                    )
+                .endCell()
+        });
     }
 
     async sendProposeWithdrawProfit(
-        
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+        }
     ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.WithdrawProfit, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                        .endCell()
+                    )
+                .endCell()
+        });
+    }
 
+    async sendProposeDistributeTon(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+            DistributionAmount: number | bigint,
+        }
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.DestributeTon, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeCoins(opts.DistributionAmount)
+                        .endCell()
+                    )
+                .endCell()
+        });
     }
 
     async sendProposeArbitraryTransaction(
-        
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+            Destination: Address,
+            Amount: number | bigint,
+            MsgBody: Cell,
+        }
     ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.ArbitraryTransaction, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeAddress(opts.Destination)
+                            .storeCoins(opts.Amount)
+                            .storeRef(opts.MsgBody)
+                        .endCell()
+                    )
+                .endCell()
+        });
     }
 
     async sendProposeUpdateAgreementPercent(
-        
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+            AgreementPercentNumerator: number | bigint,
+            AgreementPercentDenumerator: number | bigint,
+        }
     ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.UpdateAgreementPercent, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeUint(opts.AgreementPercentNumerator, 32)
+                            .storeUint(opts.AgreementPercentDenumerator, 32)
+                        .endCell()
+                    )
+                .endCell()
+        });
     }
 
     async sendProposeTransferPoints(
-        
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        opts: {
+            Passcode: number | bigint,
+            Deadline: number | bigint,
+            Destination: Address,
+            ApprovalPoints: number | bigint,
+            ProfitPoints: number | bigint,
+        }
     ) {
-
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(opts.Passcode, 32)
+                    .storeUint(ADaoTransactionTypes.UpdateAgreementPercent, 32)
+                    .storeUint(opts.Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeAddress(opts.Destination)
+                            .storeUint(opts.ApprovalPoints, 32)
+                            .storeUint(opts.ProfitPoints, 32)
+                        .endCell()
+                    )
+                .endCell()
+        });
     }
 
     // Approve transaction

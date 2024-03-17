@@ -20,8 +20,10 @@ export const ADaoOperationCodes = {
 export const ADaoTransactionTypes = {
     InviteAddress: 0,
     DeleteAddress: 1,
-    DestributeTon: 2,
-    ArbitraryTransaction: 3,
-    UpdateAgreementPercent: 4,
+    WithdrawProfit: 2,
+    DestributeTon: 3,
+    ArbitraryTransaction: 4,
+    UpdateAgreementPercent: 5,
+    TransferPoint: 6,
 }
 
