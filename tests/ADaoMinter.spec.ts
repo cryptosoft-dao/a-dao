@@ -167,6 +167,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(wallet0AcceptsInvitation.transactions);
+
+        const ADaoDataAfterWallet0In = await firstADao.getADaoData();
+        expect(ADaoDataAfterWallet0In.total_approval_points).toStrictEqual(BigInt(10));
+        expect(ADaoDataAfterWallet0In.total_profit_points).toStrictEqual(BigInt(10));
         
         // Wallet1 accepts invitation to A DAO
 
@@ -182,6 +186,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(wallet1AcceptsInvitation.transactions);
+
+        const ADaoDataAfterWallet1In = await firstADao.getADaoData();
+        expect(ADaoDataAfterWallet1In.total_approval_points).toStrictEqual(BigInt(30));
+        expect(ADaoDataAfterWallet1In.total_profit_points).toStrictEqual(BigInt(30));
 
     });
 
@@ -199,6 +207,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(wallet0QuitsADao.transactions);
+
+        const ADaoDataAfterWallet0Out = await firstADao.getADaoData();
+        expect(ADaoDataAfterWallet0Out.total_approval_points).toStrictEqual(BigInt(20));
+        expect(ADaoDataAfterWallet0Out.total_profit_points).toStrictEqual(BigInt(20));
 
     });
 

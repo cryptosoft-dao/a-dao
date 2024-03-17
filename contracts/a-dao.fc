@@ -51,7 +51,7 @@
 ;; Storage functions
 
 () save_data() impure inline {
-
+    ~strdump("Start save_data()");
     set_data(
         begin_cell()
             .store_int(active?, 1)
@@ -71,9 +71,12 @@
             .store_uint(total_profit_reserved, 32)
         .end_cell()
     );
+    ~strdump("End save_data()");
 }
 
 () load_data() impure inline { 
+
+    ~strdump("Start load_data()");
 
     slice ds = get_data().begin_parse();
     active? = ds~load_int(1);
@@ -82,20 +85,24 @@
 
     if (active? == false) {
 
+        ~strdump("active? == false");
+
         transaction_fee = 0;
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
         profit_reserve_percent_numerator = 0; 
         profit_reserve_percent_denominator = 0;
-        profitable_addresses = begin_cell().end_cell();
-        pending_invitations = begin_cell().end_cell();
-        pending_transactions = begin_cell().end_cell();
-        authorized_addresses = begin_cell().end_cell();
+        profitable_addresses = new_dict();
+        pending_invitations = new_dict();
+        pending_transactions = new_dict();
+        authorized_addresses = new_dict();
         total_approval_points = 0;
         total_profit_points = 0; 
         total_profit_reserved = 0;
 
     } else {
+
+        ~strdump("active? == true");
 
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
@@ -112,6 +119,8 @@
         ds.end_parse();
 
     }
+
+    ~strdump("End load_data()");
 
 }
 
@@ -456,13 +465,41 @@
 
     if (op == op::quit_a_dao) {
 
-        ;; Check if sender is an authorized routing pool wallet
+        int key = in_msg_body~load_uint(32);
 
-        int address_index = in_msg_body~load_uint(8);
+        ~strdump("key parsed");
 
-        check_authority(sender_address);
+        (cell val, int flag) = authorized_addresses.udict_get_ref?(32, key);
 
-        authorized_addresses.udict_delete?(8, address_index);
+        slice val_cs = val.begin_parse();
+
+        slice address = val_cs~load_msg_addr();
+        int approval_points = val_cs~load_uint(32);
+        int profit_points = val_cs~load_uint(32);
+
+        address~dump();
+        approval_points~dump();
+        profit_points~dump();
+
+        ~strdump("authorized_address parsed");
+
+        if (flag & equal_slices(sender_address, address)) {
+
+            ~strdump("Start authorized_address removal");
+
+            (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, key);
+
+            throw_unless(666, flag);
+
+            ~strdump("End authorized_address removal");
+
+            total_approval_points -= approval_points;
+            total_profit_points -= profit_points;
+
+            total_approval_points~dump();
+            total_profit_points~dump();
+
+        }
 
         save_data();
         return ();
@@ -483,7 +520,7 @@
 
         if (flag & equal_slices(sender_address, address)) {
 
-            authorized_addresses.udict_set_ref(32, key, val);
+            authorized_addresses~udict_set_ref(32, key, val);
 
             total_approval_points += approval_points;
             total_profit_points += profit_points;
