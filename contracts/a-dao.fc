@@ -35,7 +35,7 @@
             ;; int32 deadline
             ;; cell transaction_info
             ;; cell approves
-            ;; int32 approve_points
+            ;; int32 approval_points_recieved
     global cell pending_transactions;
     ;; udict authorized_addresses
         ;; Key: uint256 hash(address)
@@ -161,46 +161,60 @@
 
     if (op == op::approve_transaction) {
 
-        ;; Check if sender is an authorized routing pool wallet
+        ~strdump("Start transaction approval");
 
-        int passcode = in_msg_body~load_uint(8);
-        int transaction_index = in_msg_body~load_uint(8);
+        int passcode = in_msg_body~load_uint(32);
+        int transaction_index = in_msg_body~load_uint(32);
 
-        ;; get transaction by transaction_index
+        ~strdump("Start sender authorization");
 
-        (slice transaction, int flag) = pending_transactions.udict_get?(32, transaction_index);
+        (cell authorized_address_info, int success?) = authorized_addresses.udict_get_ref?(32, passcode);
+        slice authorized_address_info_cs = authorized_address_info.begin_parse();
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
+
+        throw_unless(222, success? & equal_slices(sender_address, authorized_address));
+
+        ~strdump("Start points parsing");
+
+        int approval_points = authorized_address_info_cs~load_uint(32);
+        int profit_points = authorized_address_info_cs~load_uint(32);
+
+        ~strdump("Get transaction by transaction_index");
+
+        (cell transaction, int flag) = pending_transactions.udict_get_ref?(32, transaction_index);
         throw_unless(200, flag);
 
-        ;; Parse transaction
+        ~strdump("Parse transaction");
 
-        int transaction_type = transaction~load_uint(4); ;; transaction_type
-        int deadline = transaction~load_uint(32); ;; deadline
-        cell transaction_info = transaction~load_ref(); ;; transaction_info
-        cell approves = transaction~load_ref(); ;; approves
-        int approve_points = transaction~load_uint(32); ;; approve_points
+        slice transaction_cs = transaction.begin_parse();
 
-        ;; add approve
+        int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
+        int deadline = transaction_cs~load_uint(32); ;; deadline
+        cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
+        cell approves = transaction_cs~load_dict(); ;; approves
+        int approval_points_recieved = transaction_cs~load_uint(32); ;; approval_points_recieved
 
-        int success? = approves~udict_add?(8, passcode, transaction);
+        ~strdump("Add approve to approves dictionary");
 
-        ;; get info about address from authorized_addresses
+        int success? = approves~udict_add?(32, passcode, transaction_cs);
 
-        (slice authorized_address_info, int success?) = authorized_addresses.udict_get?(8, passcode);
-        throw_unless(111, success?); ;; throw if there is not such a address
-
-        slice address = authorized_address_info~load_msg_addr();
-        int approval_points = authorized_address_info~load_uint(32);
-        int profit_points = authorized_address_info~load_uint(32);
-
-        ;; Calculate new total transaction
-
-        int new_approve_points = approve_points + approval_points;
+        ~strdump("Count approves");
 
         int approves_for_approval = total_approval_points / agreement_percent_denominator * agreement_percent_numerator;
+        approval_points_recieved = approval_points_recieved + approval_points;
+        
+        approves_for_approval~dump();
+        approval_points_recieved~dump();
 
-        ;; Do pending_transactions in case of approval, otherwise save approve
+        ~strdump("Delete old transaction state from pending_transactions");
 
-        if (new_approve_points > approves_for_approval) {
+        (pending_transactions, int flag) = pending_transactions.udict_delete?(32, transaction_index);
+        throw_unless(666, flag);
+        if (transaction_index == 0) { pending_transactions = new_dict(); }
+
+        ~strdump("Start check if sufficient approves to start actions");
+
+        if (approval_points_recieved > approves_for_approval) {
 
             slice transaction_info_cs = transaction_info.begin_parse();
 
@@ -208,20 +222,38 @@
 
             if (transaction_type == tt::invite_address) {
 
-                (int last_passcode, _, _) = pending_transactions.udict_get_max?(8);
-                int new_passcode = last_passcode + 1;
+                ~strdump("Start Transaction Type: Invite Address");
 
-                transaction_info_cs~load_msg_addr(); ;; slice address_to_add_addr
+                (int last_passcode, _, _) = pending_invitations.udict_get_max_ref?(32);
+                int passcode = last_passcode + 1;
+
+                slice authorized_address = transaction_info_cs~load_msg_addr(); ;; slice address_to_add_addr
                 int approval_points = transaction_info_cs~load_uint(32);
-                transaction_info_cs~load_uint(32); ;; int profit_points
+                int profit_points = transaction_info_cs~load_uint(32); ;; int profit_points
 
-                ;; Add new address to dict
+                ~strdump("Add address to pending invitations");
 
-                authorized_addresses~udict_add?(8, new_passcode, transaction_info_cs);
+                pending_invitations~udict_set_ref(32, passcode, transaction_info);
 
-                ;; Increase total approves
+                ~strdump("Send invitation to authorized_address");
 
-                total_approval_points += approval_points;
+                cell msg = 
+                    begin_cell()
+                        .store_uint(0x18, 6)
+                        .store_slice(authorized_address)
+                        .store_coins(30000000) ;; check on tests
+                        .store_uint(1, 107)
+                        .store_ref(
+                            begin_cell()
+                                .store_uint(op::invite_to_a_dao, 32)
+                                .store_uint(passcode, 32)
+                                .store_uint(approval_points, 32)
+                                .store_uint(profit_points, 32)
+                            .end_cell()
+                        )
+                    .end_cell();
+
+                send_raw_message(msg, 0);
 
                 save_data();
                 return ();
@@ -334,13 +366,30 @@
             }
 
             if (transaction_type == tt::transfer_points) {
+
+                save_data();
+                return ();
                 
             }
 
         } else {
 
-            approves~udict_add?(8, transaction_index, transaction);
+            ~strdump("Save new transaction state if not sufficient points for actions");
+
+            cell new_transaction_state = begin_cell()
+                .store_uint(transaction_type, 32)
+                .store_uint(deadline, 32)
+                .store_ref(transaction_info)
+                .store_dict(approves)
+                .store_uint(approval_points_recieved, 32)
+            .end_cell();
+
+            pending_transactions~udict_set_ref(32, transaction_index, new_transaction_state);
+        
         }
+
+        save_data();
+        return ();
 
     }
 
@@ -382,7 +431,7 @@
         ~strdump("Set zero approves");
 
         cell approves = new_dict();
-        int approve_points = 0;
+        int approval_points_recieved = 0;
 
         ;; Index 0: Add address
         ;; transaction_info: slice address_to_add_addr
@@ -401,9 +450,11 @@
                 32, 
                 transaction_index, 
                 begin_cell()
-                    .store_slice(in_msg_body)
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
                     .store_dict(approves)
-                    .store_uint(approve_points, 32)
+                    .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
 
@@ -427,7 +478,7 @@
                 begin_cell()
                     .store_slice(in_msg_body)
                     .store_dict(approves)
-                    .store_uint(approve_points, 32)
+                    .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
 
@@ -451,7 +502,7 @@
                 begin_cell()
                     .store_slice(in_msg_body)
                     .store_dict(approves)
-                    .store_uint(approve_points, 32)
+                    .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
 
@@ -481,7 +532,7 @@
                 begin_cell()
                     .store_slice(in_msg_body)
                     .store_dict(approves)
-                    .store_uint(approve_points, 32)
+                    .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
 
@@ -506,7 +557,7 @@
                 begin_cell()
                     .store_slice(in_msg_body)
                     .store_dict(approves)
-                    .store_uint(approve_points, 32)
+                    .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
 
@@ -744,7 +795,7 @@
         profit_reserve_percent_denominator, ;; uint32
         profitable_addresses,
         pending_invitations, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int profit_points
-        pending_transactions, ;; key: uint10 // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approve_points
+        pending_transactions, ;; key: uint10 // value (cell): int transaction_type, int deadline, cell transaction_info, cell approves, int approval_points_recieved
         authorized_addresses, ;; key: int address_sha256_hash // value (cell): slice address,  int approval_points, int profit_points
         total_approval_points, ;; uint32
         total_profit_points, ;; uint32

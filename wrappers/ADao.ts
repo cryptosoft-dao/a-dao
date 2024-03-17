@@ -221,6 +221,7 @@ export class ADao implements Contract {
                             .storeAddress(opts.AddressToInvite)
                             .storeUint(opts.ApprovalPoints, 32)
                             .storeUint(opts.ProfitPoints, 32)
+                        .endCell()
                     )
                 .endCell()
         });
