@@ -1,8 +1,9 @@
-// A DAO Minter
+// A DAO Master
 
 export const ADaoMasterOperationCodes = {
-    ChangeADaoMasterOwner: 0,
-    SendDeployMessage: 1,
+    SendDeployMessage: 0,
+    WithdrawFunds: 1,
+    ChangeADaoMasterOwner: 2,
 }
 
 // A DAO

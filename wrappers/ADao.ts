@@ -235,7 +235,7 @@ export class ADao implements Contract {
             Passcode: number | bigint,
             Deadline: number | bigint,
             // cell transaction_info
-            AddressToDelete: Address,
+            PasscodeToDelete: number | bigint,
         }
     ) {
         await provider.internal(via, {
@@ -249,7 +249,7 @@ export class ADao implements Contract {
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
-                            .storeAddress(opts.AddressToDelete)
+                            .storeUint(opts.PasscodeToDelete, 32)
                         .endCell()
                     )
                 .endCell()
@@ -406,7 +406,7 @@ export class ADao implements Contract {
 
     // Approve transaction
 
-    async sendApproveInviteAddress(
+    async sendApprove(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -425,41 +425,6 @@ export class ADao implements Contract {
                     .storeUint(opts.TransactionIndex, 32)
                 .endCell()
         });
-    }
-
-    async sendApproveDeleteAddress(
-        
-    ) {
-
-    }
-    async sendApproveDistributeTon(
-        
-    ) {
-
-    }
-
-    async sendApproveWithdrawProfit(
-        
-    ) {
-
-    }
-
-    async sendApproveArbitraryTransaction(
-        
-    ) {
-
-    }
-
-    async sendApproveUpdateAgreementPercent(
-        
-    ) {
-
-    }
-
-    async sendApproveTransferPoints(
-        
-    ) {
-
     }
 
     // Get-methods

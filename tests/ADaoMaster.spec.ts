@@ -58,7 +58,7 @@ describe('ADaoMaster', () => {
             ),
         );
 
-        const ADaoMasterDeployResult = await aDaoMaster.sendDeploy(deployer.getSender(), toNano('10.777'));
+        const ADaoMasterDeployResult = await aDaoMaster.sendDeploy(deployer.getSender(), toNano('13'));
 
         expect(ADaoMasterDeployResult.transactions).toHaveTransaction({
             from: deployer.address,
@@ -280,11 +280,30 @@ describe('ADaoMaster', () => {
 
     });
 
+    it('Should Propose Transaction: Delete Address wallet1', async () => {
+
+        const proposeWallet1Delete = await firstADao.sendProposeDeleteAddress(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            PasscodeToDelete: BigInt(1),
+        })
+
+        expect(proposeWallet1Delete.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet1Delete.transactions);
+
+    });
+
     it('Should Approve Transaction: Invite Address wallet3', async () => {
 
         // Wallet0 approves Wallet3 invitation to A DAO
 
-        const wallet0ApprovesWallet3Invitation = await firstADao.sendApproveInviteAddress(wallet0.getSender(), toNano('0.33'), {
+        const wallet0ApprovesWallet3Invitation = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), {
             Passcode: 0,
             TransactionIndex: 0,
         })
@@ -300,7 +319,7 @@ describe('ADaoMaster', () => {
 
         // Wallet2 approves Wallet3 invitation to A DAO
 
-        const wallet2ApprovesWallet3Invitation = await firstADao.sendApproveInviteAddress(wallet2.getSender(), toNano('0.33'), {
+        const wallet2ApprovesWallet3Invitation = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), {
             Passcode: 2,
             TransactionIndex: 0,
         })
@@ -372,26 +391,39 @@ describe('ADaoMaster', () => {
 
     });
 
-    it('Should Propose Transaction: Delete Address wallet1', async () => {
+    it('Should Approve Transaction: Delete Address wallet1', async () => {
 
-        const proposeWallet1Delete = await firstADao.sendProposeDeleteAddress(wallet2.getSender(), toNano('0.33'), {
-            Passcode: 2,
-            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
-            AddressToDelete: wallet1.address,
+        // Wallet0 approves wallet1 removal
+
+        const wallet0ApprovesWallet1Removal = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), {
+            Passcode: 0,
+            TransactionIndex: 1,
         })
 
-        expect(proposeWallet1Delete.transactions).toHaveTransaction({
-            from: wallet2.address,
+        expect(wallet0ApprovesWallet1Removal.transactions).toHaveTransaction({
+            from: wallet0.address,
             to: firstADao.address,
-            op: ADaoOperationCodes.ProposeTransaction,
+            op: ADaoOperationCodes.ApproveTransaction,
             success: true,
         })
 
-        printTransactionFees(proposeWallet1Delete.transactions);
+        printTransactionFees(wallet0ApprovesWallet1Removal.transactions);
 
-    });
+        // Wallet2 approves wallet1 removal
 
-    it('Should Approve Transaction: Delete Address', async () => {
+        const wallet2ApprovesWallet1Removal = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            TransactionIndex: 1,
+        })
+
+        expect(wallet2ApprovesWallet1Removal.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesWallet1Removal.transactions);
 
     });
 

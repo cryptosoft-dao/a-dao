@@ -294,7 +294,6 @@ const int tt::delete_pending_transactions = 10;
 
         (pending_transactions, int flag) = pending_transactions.udict_delete?(32, transaction_index);
         throw_unless(666, flag);
-        if (transaction_index == 0) { pending_transactions = new_dict(); }
 
         ~strdump("Start check if sufficient approves to start actions");
 
@@ -349,15 +348,22 @@ const int tt::delete_pending_transactions = 10;
 
                 ~strdump("Start Transaction Approval: Delete Address");
 
-                int address_to_delete_index = transaction_info_cs~load_uint(8);
+                int passcode_to_delete = transaction_info_cs~load_uint(32);
 
-                ;; Delete address from dict
+                ~strdump("Decrease total approves");
 
-                authorized_addresses.udict_delete?(8, address_to_delete_index);
-
-                ;; Decrease total approves
+                (cell authorized_address_info, int flag) = authorized_addresses.udict_get_ref?(32, passcode_to_delete);
+                slice authorized_address_info_cs = authorized_address_info.begin_parse();
+                authorized_address_info_cs~load_msg_addr(); ;; slice authorized_address
+                int approval_points = authorized_address_info_cs~load_uint(32);
+                int profit_points = authorized_address_info_cs~load_uint(32);
 
                 total_approval_points -= approval_points;
+                total_profit_points -= profit_points;
+
+                ~strdump("Delete address from dict");
+
+                (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, passcode_to_delete);
 
                 save_data();
                 just_notify_master(op, transaction_type);
@@ -539,10 +545,10 @@ const int tt::delete_pending_transactions = 10;
 
         ~strdump("Get max pending_transactions index");
 
-        (int transaction_index, _, int flag) = pending_transactions.udict_get_max?(32);
+        (int max_transaction_index, _, int flag) = pending_transactions.udict_get_max?(32);
 
         if (~ flag) {
-            transaction_index = 0;
+            max_transaction_index = -1;
         }
 
         ~strdump("Convert transaction_info to slice");
@@ -566,7 +572,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -586,13 +592,13 @@ const int tt::delete_pending_transactions = 10;
 
             ~strdump("Start Transaction Proposal: Delete Address");
 
-            transaction_info_cs~load_msg_addr(); ;; slice address_to_eliminate_addr
+            transaction_info_cs~load_uint(32); ;; int passcode_to_delete
 
             ~strdump("Add transaction to pending_transactions");
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -615,7 +621,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -641,7 +647,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -673,7 +679,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -700,7 +706,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -728,7 +734,7 @@ const int tt::delete_pending_transactions = 10;
 
             pending_transactions~udict_set_ref(
                 32, 
-                transaction_index, 
+                max_transaction_index + 1, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
