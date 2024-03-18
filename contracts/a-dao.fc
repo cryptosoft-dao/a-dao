@@ -43,12 +43,13 @@ const int tt::delete_pending_transactions = 10;
     global int profit_reserve_percent_numerator; ;; int32
     global int profit_reserve_percent_denominator; ;; int32
     ;; udict profitable_addresses
-        ;; Key: uint256 hash(address)
-        ;; value: slice profitable_address
+        ;; Key: uint32
+        ;; value (cell)
+            ;; slice profitable_address
     global cell profitable_addresses;
     ;; udict pending_invitations
         ;; Key: uint32
-        ;; value
+        ;; value (cell)
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
@@ -63,8 +64,8 @@ const int tt::delete_pending_transactions = 10;
             ;; int32 approval_points_recieved
     global cell pending_transactions;
     ;; udict authorized_addresses
-        ;; Key: uint256 hash(address)
-        ;; value (Slice)
+        ;; Key: uint32
+        ;; value (cell)
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
@@ -284,11 +285,8 @@ const int tt::delete_pending_transactions = 10;
 
         ~strdump("Count approves");
 
-        int approves_for_approval = total_approval_points / agreement_percent_denominator * agreement_percent_numerator;
+        int approves_for_approval = total_approval_points * agreement_percent_numerator / agreement_percent_denominator;
         approval_points_recieved = approval_points_recieved + approval_points;
-        
-        approves_for_approval~dump();
-        approval_points_recieved~dump();
 
         ~strdump("Delete old transaction state from pending_transactions");
 
@@ -350,7 +348,7 @@ const int tt::delete_pending_transactions = 10;
 
                 int passcode_to_delete = transaction_info_cs~load_uint(32);
 
-                ~strdump("Decrease total approves");
+                ~strdump("Decrease total points");
 
                 (cell authorized_address_info, int flag) = authorized_addresses.udict_get_ref?(32, passcode_to_delete);
                 slice authorized_address_info_cs = authorized_address_info.begin_parse();
@@ -358,14 +356,16 @@ const int tt::delete_pending_transactions = 10;
                 int approval_points = authorized_address_info_cs~load_uint(32);
                 int profit_points = authorized_address_info_cs~load_uint(32);
 
-                total_approval_points -= approval_points;
-                total_profit_points -= profit_points;
+                total_approval_points = total_approval_points - approval_points;
+                total_profit_points = total_profit_points - profit_points;
 
                 ~strdump("Delete address from dict");
 
                 (authorized_addresses, int flag) = authorized_addresses.udict_delete?(32, passcode_to_delete);
 
                 save_data();
+                total_approval_points~dump();
+                total_profit_points~dump();
                 just_notify_master(op, transaction_type);
                 return();
 
@@ -377,7 +377,11 @@ const int tt::delete_pending_transactions = 10;
 
                 ~strdump("Start Transaction Approval: Withdraw Profit");
 
-                slice profitable_address = transaction_info_cs~load_msg_addr();
+                int profitable_address_passcode = transaction_info_cs~load_uint(32);
+                (cell profitable_address_info, int flag) = profitable_addresses.udict_get_ref?(32, profitable_address_passcode);
+                throw_unless(222, flag);
+                slice profitable_address_info_cs = profitable_address_info.begin_parse();
+                slice profitable_address = profitable_address_info_cs~load_msg_addr();
 
                 var msg = begin_cell()
                     .store_uint(0x18, 6)
@@ -403,7 +407,7 @@ const int tt::delete_pending_transactions = 10;
 
                 ~strdump("Start Transaction Approval: Distribute Ton");
 
-                int ton_to_route = transaction_info_cs~load_uint(32); ;; int amount
+                int ton_to_distribute = transaction_info_cs~load_uint(32); ;; int amount
 
                 ;; Route ton
 
@@ -415,7 +419,7 @@ const int tt::delete_pending_transactions = 10;
                     int approval_points = authorized_address_info~load_uint(32);
                     int profit_points = authorized_address_info~load_uint(32);
 
-                    int ton_amount_to_address = ton_to_route / total_profit_points * profit_points;
+                    int ton_amount_to_address = ton_to_distribute / total_profit_points * profit_points;
                 
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
@@ -617,6 +621,9 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::withdraw_profit) {
 
             ~strdump("Start Transaction Proposal: Withdraw Profit");
+
+            transaction_info_cs~load_uint(32); ;; int profitable_address_passcode
+
             ~strdump("Add transaction to pending_transactions");
 
             pending_transactions~udict_set_ref(

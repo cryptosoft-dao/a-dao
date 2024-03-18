@@ -133,6 +133,17 @@ export class ADao implements Contract {
 
     // General
 
+    async sendTopUpBalance(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+        });
+    }
+
     async sendAcceptInvitationToADao(
         provider: ContractProvider,
         via: Sender,
@@ -263,6 +274,7 @@ export class ADao implements Contract {
         opts: {
             Passcode: number | bigint,
             Deadline: number | bigint,
+            ProfitableAddressPasscode: number | bigint,
         }
     ) {
         await provider.internal(via, {
@@ -276,6 +288,7 @@ export class ADao implements Contract {
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
+                            .storeUint(opts.ProfitableAddressPasscode, 32)
                         .endCell()
                     )
                 .endCell()

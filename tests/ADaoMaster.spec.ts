@@ -97,8 +97,8 @@ describe('ADaoMaster', () => {
         const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
 
         const ProfitableAddressesDict = Dictionary.empty<bigint, Cell>();
-        ProfitableAddressesDict.set(bufferToBigInt(profitableAddress.address.hash), beginCell().storeAddress(profitableAddress.address).endCell());
-        const ProfitableAddresses = beginCell().storeDictDirect(ProfitableAddressesDict, Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()).endCell();
+        ProfitableAddressesDict.set(BigInt(0), beginCell().storeAddress(profitableAddress.address).endCell());
+        const ProfitableAddresses = beginCell().storeDictDirect(ProfitableAddressesDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
         const PendingInvitationsDict = Dictionary.empty<bigint, Cell>();
         PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(28 ,32).storeUint(37, 32).endCell());
@@ -432,6 +432,7 @@ describe('ADaoMaster', () => {
         const proposeWithdrawProfit = await firstADao.sendProposeWithdrawProfit(wallet2.getSender(), toNano('0.33'), {
             Passcode: 2,
             Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            ProfitableAddressPasscode: 0,
         })
 
         expect(proposeWithdrawProfit.transactions).toHaveTransaction({
@@ -446,6 +447,56 @@ describe('ADaoMaster', () => {
     });
 
     it('Should Approve Transaction: Withdraw Profit', async () => {
+
+        // Wallet0 approves Withdraw Profit
+
+        const wallet0ApprovesWithdrawProfit = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), {
+            Passcode: 0,
+            TransactionIndex: 0,
+        })
+
+        expect(wallet0ApprovesWithdrawProfit.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesWithdrawProfit.transactions);
+
+        // Wallet2 approves Withdraw Profit
+
+        const wallet2ApprovesWithdrawProfit = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            TransactionIndex: 0,
+        })
+
+        expect(wallet2ApprovesWithdrawProfit.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        expect(wallet2ApprovesWithdrawProfit.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: profitableAddress.address,
+            op: 48,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesWithdrawProfit.transactions);
+
+        const topUpBalance = await firstADao.sendTopUpBalance(profitableAddress.getSender(), toNano(333));
+
+        expect(topUpBalance.transactions).toHaveTransaction({
+            from: profitableAddress.address,
+            to: firstADao.address,
+            value: toNano(333),
+            success: true,
+        })
+
+        printTransactionFees(topUpBalance.transactions);
 
     });
 
