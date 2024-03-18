@@ -167,9 +167,6 @@ export class ADao implements Contract {
         provider: ContractProvider,
         via: Sender,
         value: bigint,
-        opts: {
-            Passcode: bigint | number,
-        }
     ) {
         await provider.internal(via, {
             value,
@@ -177,7 +174,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.QuitADao, 32)
-                    .storeUint(opts.Passcode, 32)
                 .endCell()
         });
     }
@@ -187,7 +183,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             NewAddress: Address,
         }
     ) {
@@ -197,7 +192,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ChangeMyAddress, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeAddress(opts.NewAddress)
                 .endCell()
         });
@@ -210,7 +204,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             // cell transaction_info
             AddressToInvite: Address,
@@ -224,7 +217,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.InviteAddress, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -243,10 +235,9 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             // cell transaction_info
-            PasscodeToDelete: number | bigint,
+            AddressToDelete: Address,
         }
     ) {
         await provider.internal(via, {
@@ -255,12 +246,11 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.DeleteAddress, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
-                            .storeUint(opts.PasscodeToDelete, 32)
+                            .storeAddress(opts.AddressToDelete)
                         .endCell()
                     )
                 .endCell()
@@ -272,7 +262,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             ProfitableAddressPasscode: number | bigint,
         }
@@ -283,7 +272,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.WithdrawProfit, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -300,7 +288,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             DistributionAmount: number | bigint,
         }
@@ -311,7 +298,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.DistributeTon, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -328,7 +314,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             Destination: Address,
             Amount: number | bigint,
@@ -341,7 +326,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.ArbitraryTransaction, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -360,7 +344,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             AgreementPercentNumerator: number | bigint,
             AgreementPercentDenumerator: number | bigint,
@@ -372,7 +355,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.UpdateAgreementPercent, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -390,7 +372,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             Deadline: number | bigint,
             Destination: Address,
             ApprovalPoints: number | bigint,
@@ -403,7 +384,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(ADaoTransactionTypes.UpdateAgreementPercent, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
@@ -424,7 +404,6 @@ export class ADao implements Contract {
         via: Sender,
         value: bigint,
         opts: {
-            Passcode: number | bigint,
             TransactionIndex: number | bigint,
         }
     ) {
@@ -434,7 +413,6 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ApproveTransaction, 32)
-                    .storeUint(opts.Passcode, 32)
                     .storeUint(opts.TransactionIndex, 32)
                 .endCell()
         });
