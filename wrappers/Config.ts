@@ -1,29 +1,36 @@
 // A DAO Minter
 
-export const ADaoMinterOperationCodes = {
-    ProcessDeployMessage: 0,
+export const ADaoMasterOperationCodes = {
+    ChangeADaoMasterOwner: 0,
+    SendDeployMessage: 1,
 }
 
 // A DAO
 
 export const ADaoOperationCodes = {
     ProcessDeployMessage: 0,
-    ActivateADao: 1,
-    ProposeTransaction: 2,
-    ApproveTransaction: 3,
-    AcceptInvitationToADao: 4,
-    QuitADao: 5,
-    InviteToADao: 6,
-    ChangeMyAddress: 7,
+    MasterLog: 1,
+    ActivateADao: 2,
+    ProposeTransaction: 3,
+    ApproveTransaction: 4,
+    AcceptInvitationToADao: 5,
+    BuyPoints: 6,
+    InviteToADao: 7,
+    ChangeMyAddress: 8,
+    QuitADao: 9,
 };
 
 export const ADaoTransactionTypes = {
-    InviteAddress: 0,
-    DeleteAddress: 1,
-    WithdrawProfit: 2,
-    DistributeTon: 3,
-    ArbitraryTransaction: 4,
-    UpdateAgreementPercent: 5,
-    TransferPoint: 6,
+    TransactionWithoutType: 0,
+    InviteAddress: 1,
+    DeleteAddress: 2,
+    WithdrawProfit: 3,
+    DistributeTon: 4,
+    ArbitraryTransaction: 5,
+    UpdateAgreementPercent: 6,
+    TransferPoint: 7,
+    PutUpPointsForSale: 8,
+    DeletePendingInvitations: 9,
+    DeletePendingTransactions: 10,
 }
 

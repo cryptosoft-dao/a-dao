@@ -4,24 +4,19 @@ import {
     Cell, 
     Contract, 
     contractAddress, 
-    ContractProvider, 
-    Dictionary, 
+    ContractProvider,
     Sender, 
     SendMode, 
-    Slice, 
-    toNano 
 } from '@ton/core';
-import { ADaoMinterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
-import { ADao } from './ADao';
 
-export type ADaoMinterConfig = {
+export type ADaoMasterConfig = {
     OwnerAddress: Address;
     ADaoCode: Cell;
     NextADaoCreationFee: number | bigint;
     NextADaoTransactionFee: number | bigint;
 }
 
-export function serializeADaoMinterConfigToCell(config: ADaoMinterConfig): Cell {
+export function serializeADaoMasterConfigToCell(config: ADaoMasterConfig): Cell {
     return beginCell()
         .storeAddress(config.OwnerAddress)
         .storeRef(config.ADaoCode)
@@ -30,17 +25,17 @@ export function serializeADaoMinterConfigToCell(config: ADaoMinterConfig): Cell 
     .endCell();
 }
 
-export class ADaoMinter implements Contract {
+export class ADaoMaster implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
 
     static createFromAddress(address: Address) {
-        return new ADaoMinter(address);
+        return new ADaoMaster(address);
     }
 
-    static createFromConfig(config: ADaoMinterConfig, code: Cell, workchain = 0) {
-        const data = serializeADaoMinterConfigToCell(config);
+    static createFromConfig(config: ADaoMasterConfig, code: Cell, workchain = 0) {
+        const data = serializeADaoMasterConfigToCell(config);
         const init = { code, data };
-        return new ADaoMinter(contractAddress(workchain, init), init);
+        return new ADaoMaster(contractAddress(workchain, init), init);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {

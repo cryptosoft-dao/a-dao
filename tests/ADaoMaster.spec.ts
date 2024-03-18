@@ -1,18 +1,18 @@
 import { Blockchain, BlockchainSnapshot, internal, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
 import { Address, beginCell, Cell, Dictionary, Slice, toNano, TransactionDescriptionGeneric } from '@ton/core';
-import { ADaoMinter } from '../wrappers/ADaoMinter';
+import { ADaoMaster } from '../wrappers/ADaoMaster';
 import { ADao } from '../wrappers/ADao';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { ADaoOperationCodes } from '../wrappers/Config';
 
-describe('ADaoMinter', () => {
+describe('ADaoMaster', () => {
 
     const blockchainStartTime = 100;
 
     let blockchain: Blockchain;
 
-    let aDaoMinter: SandboxContract<ADaoMinter>;
+    let aDaoMaster: SandboxContract<ADaoMaster>;
     let firstADao: SandboxContract<ADao>;
     let secondADao: SandboxContract<ADao>;
     let deployer: SandboxContract<TreasuryContract>;
@@ -24,12 +24,12 @@ describe('ADaoMinter', () => {
     let wallet5: SandboxContract<TreasuryContract>;
     let profitableAddress: SandboxContract<TreasuryContract>;
 
-    let ADaoMinterCode: Cell;
+    let ADaoMasterCode: Cell;
     let ADaoCode: Cell;
 
     beforeAll(async () => {
 
-        ADaoMinterCode = await compile('ADaoMinter');
+        ADaoMasterCode = await compile('ADaoMaster');
         ADaoCode = await compile('ADao');
 
         blockchain = await Blockchain.create();
@@ -46,37 +46,37 @@ describe('ADaoMinter', () => {
 
         // Params
 
-        aDaoMinter = blockchain.openContract(
-            ADaoMinter.createFromConfig(
+        aDaoMaster = blockchain.openContract(
+            ADaoMaster.createFromConfig(
                 {
                     OwnerAddress: deployer.address,
                     ADaoCode: ADaoCode,
                     NextADaoCreationFee: toNano('10'),
                     NextADaoTransactionFee: toNano('0'),
                 }, 
-                ADaoMinterCode,
+                ADaoMasterCode,
             ),
         );
 
-        const ADaoMinterDeployResult = await aDaoMinter.sendDeploy(deployer.getSender(), toNano('10.777'));
+        const ADaoMasterDeployResult = await aDaoMaster.sendDeploy(deployer.getSender(), toNano('10.777'));
 
-        expect(ADaoMinterDeployResult.transactions).toHaveTransaction({
+        expect(ADaoMasterDeployResult.transactions).toHaveTransaction({
             from: deployer.address,
-            to: aDaoMinter.address,
+            to: aDaoMaster.address,
             deploy: true,
             success: true,
         });
 
-        const firstADaoAddresss = await aDaoMinter.getADaoAddressByDeployerAddress(deployer.address);
+        const firstADaoAddresss = await aDaoMaster.getADaoAddressByDeployerAddress(deployer.address);
 
-        expect(ADaoMinterDeployResult.transactions).toHaveTransaction({
-            from: aDaoMinter.address,
+        expect(ADaoMasterDeployResult.transactions).toHaveTransaction({
+            from: aDaoMaster.address,
             to: firstADaoAddresss,
             deploy: true,
             success: true,
         });
 
-        printTransactionFees(ADaoMinterDeployResult.transactions);
+        printTransactionFees(ADaoMasterDeployResult.transactions);
 
         firstADao = blockchain.openContract(ADao.createFromAddress(firstADaoAddresss));
 
@@ -106,7 +106,7 @@ describe('ADaoMinter', () => {
         PendingInvitationsDict.set(BigInt(2), beginCell().storeAddress(wallet2.address).storeUint(37 ,32).storeUint(35, 32).endCell());
         const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
-        const ADaoMinterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
+        const ADaoMasterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {
             AgreementPercentNumerator: 51,
             AgreementPercentDenominator: 100,
             ProfitReservePercentNumerator: 10,
@@ -115,13 +115,13 @@ describe('ADaoMinter', () => {
             PendingInvitations: PendingInvitations,
         });
 
-        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+        expect(ADaoMasterActivationResult.transactions).toHaveTransaction({
             from: deployer.address,
             to: firstADao.address,
             success: true,
         });
 
-        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+        expect(ADaoMasterActivationResult.transactions).toHaveTransaction({
             from: firstADao.address,
             to: wallet0.address,
             success: true,
@@ -135,7 +135,7 @@ describe('ADaoMinter', () => {
                 .endCell(),
         });
 
-        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+        expect(ADaoMasterActivationResult.transactions).toHaveTransaction({
             from: firstADao.address,
             to: wallet1.address,
             success: true,
@@ -149,7 +149,7 @@ describe('ADaoMinter', () => {
                 .endCell(),
         });
 
-        expect(ADaoMinterActivationResult.transactions).toHaveTransaction({
+        expect(ADaoMasterActivationResult.transactions).toHaveTransaction({
             from: firstADao.address,
             to: wallet2.address,
             success: true,
@@ -163,7 +163,7 @@ describe('ADaoMinter', () => {
                 .endCell(),
         });
 
-        printTransactionFees(ADaoMinterActivationResult.transactions);
+        printTransactionFees(ADaoMasterActivationResult.transactions);
 
         const ADaoDataAfterActivation = await firstADao.getADaoData();
         expect(ADaoDataAfterActivation.active).toStrictEqual(-1);

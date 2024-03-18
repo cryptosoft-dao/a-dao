@@ -2,11 +2,9 @@
 
 ;; Operation Codes
 
-const int op::change_a_dao_minter_owner = 0;
-
-;; In-Protocol Operation Codes
-
-const int op::process_deploy_message = 0;
+const int op::send_deploy_message = 0;
+const int op::withdraw_funds = 1;
+const int op::change_a_dao_master_owner = 2;
 
 ;; Global variables
 
@@ -106,7 +104,7 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
             .store_ref(a_dao_initial_state)
             .store_ref(
                 begin_cell()
-                    .store_uint(op::process_deploy_message, 32)
+                    .store_uint(op::send_deploy_message, 32)
                     .store_uint(next_a_dao_transaction_fee, 32)
                 .end_cell()
             )

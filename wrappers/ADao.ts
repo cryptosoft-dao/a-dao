@@ -12,7 +12,7 @@ import {
     SendMode, 
     toNano 
 } from '@ton/core';
-import { ADaoMinterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
+import { ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
 import { Slice } from '@ton/core';
 
 export type ADaoData = {

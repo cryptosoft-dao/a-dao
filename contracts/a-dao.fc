@@ -3,31 +3,37 @@
 ;; Operation Codes
 
 const int op::process_deploy_message = 0;
-const int op::activate_a_dao = 1;
-const int op::propose_transaction = 2;
-const int op::approve_transaction = 3;
-const int op::accept_invitation_to_a_dao = 4;
-const int op::quit_a_dao = 5;
-const int op::invite_to_a_dao = 6;
-const int op::change_my_address = 7;
+const int op::master_log = 1;
+const int op::activate_a_dao = 2;
+const int op::propose_transaction = 3;
+const int op::approve_transaction = 4;
+const int op::accept_invitation_to_a_dao = 5;
+const int op::buy_points = 6;
+const int op::invite_to_a_dao = 7;
+const int op::change_my_address = 8;
+const int op::quit_a_dao = 9;
 
 ;; Transaction Types
 
-const int tt::invite_address = 0;
-const int tt::delete_address = 1;
-const int tt::withdraw_profit = 2;
-const int tt::distribute_ton = 3;
-const int tt::arbitrary_transaction = 4;
-const int tt::update_agreement_percent = 5;
-const int tt::transfer_points = 6;
+const int tt::transaction_without_type = 0;
+const int tt::invite_address = 1;
+const int tt::delete_address = 2;
+const int tt::withdraw_profit = 3;
+const int tt::distribute_ton = 4;
+const int tt::arbitrary_transaction = 5;
+const int tt::update_agreement_percent = 6;
+const int tt::transfer_points = 7;
+const int tt::put_up_points_for_sale = 8;
+const int tt::delete_pending_invitations = 9;
+const int tt::delete_pending_transactions = 10;
 
 ;; Storage globals
 
     ;; Initial
 
     global int active?; ;; uint1
-    global slice root_address; ;; slice 257bits ;; initial state
-    global slice deployer_address; ;; slice 257bits ;; initial state
+    global slice a_dao_master; ;; slice 257bits
+    global slice deployer_address; ;; slice 257bits
     global int transaction_fee; ;; uint32
 
     ;; Active
@@ -74,7 +80,7 @@ const int tt::transfer_points = 6;
     set_data(
         begin_cell()
             .store_int(active?, 1)
-            .store_slice(root_address)
+            .store_slice(a_dao_master)
             .store_slice(deployer_address)
             .store_uint(transaction_fee, 32)
             .store_uint(agreement_percent_numerator, 32)
@@ -99,7 +105,7 @@ const int tt::transfer_points = 6;
 
     slice ds = get_data().begin_parse();
     active? = ds~load_int(1);
-    root_address = ds~load_msg_addr();
+    a_dao_master = ds~load_msg_addr();
     deployer_address = ds~load_msg_addr();
 
     if (active? == false) {
@@ -140,6 +146,25 @@ const int tt::transfer_points = 6;
     }
 
     ~strdump("End load_data()");
+
+}
+
+() just_notify_master(int op, int transaction_type) impure inline {
+
+    cell msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(a_dao_master)
+        .store_coins(transaction_fee)
+        .store_uint(1, 107)
+        .store_ref(
+            begin_cell()
+                .store_uint(op, 32)
+                .store_uint(transaction_type, 32)
+            .end_cell()
+        )
+    .end_cell();
+
+    send_raw_message(msg, 1);
 
 }
 
@@ -315,7 +340,8 @@ const int tt::transfer_points = 6;
                 send_raw_message(msg, 0);
 
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -334,7 +360,8 @@ const int tt::transfer_points = 6;
                 total_approval_points -= approval_points;
 
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -359,6 +386,10 @@ const int tt::transfer_points = 6;
                 .end_cell();
 
                 send_raw_message(msg, 0);
+
+                save_data();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -390,7 +421,8 @@ const int tt::transfer_points = 6;
                 }
 
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -418,7 +450,8 @@ const int tt::transfer_points = 6;
                 send_raw_message(msg, 0);
 
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -430,7 +463,8 @@ const int tt::transfer_points = 6;
                 agreement_percent_denominator = transaction_info_cs~load_uint(32);
 
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
 
             }
 
@@ -438,9 +472,24 @@ const int tt::transfer_points = 6;
 
                 ~strdump("Start Transaction Approval: Transfer Points");
 
+                ~strdump("Delete address from authorized_addresses if all points transfered");
+
                 save_data();
-                return ();
+                just_notify_master(op, transaction_type);
+                return();
                 
+            }
+
+            if (transaction_type == tt::put_up_points_for_sale) {
+
+            }
+
+            if (transaction_type == tt::delete_pending_invitations) {
+
+            }
+
+            if (transaction_type == tt::delete_pending_transactions) {
+
             }
 
         } else {
@@ -459,8 +508,9 @@ const int tt::transfer_points = 6;
         
         }
 
-        save_data();
-        return ();
+            save_data();
+            just_notify_master(op, tt::transaction_without_type);
+            return();
 
     }
 
@@ -527,7 +577,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -552,7 +603,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -574,7 +626,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -599,7 +652,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -630,7 +684,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -656,7 +711,8 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
 
         }
 
@@ -683,7 +739,21 @@ const int tt::transfer_points = 6;
             );
 
             save_data();
-            return ();
+            just_notify_master(op, transaction_type);
+            return();
+
+        }
+
+        if (transaction_type == tt::put_up_points_for_sale) {
+
+        }
+
+        if (transaction_type == tt::delete_pending_invitations) {
+
+        }
+
+        if (transaction_type == tt::delete_pending_transactions) {
+
         }
 
     }
@@ -719,7 +789,8 @@ const int tt::transfer_points = 6;
         }
 
         save_data();
-        return ();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
 
     }
 
@@ -755,7 +826,8 @@ const int tt::transfer_points = 6;
         }
 
         save_data();
-        return ();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
 
     }
 
@@ -790,7 +862,8 @@ const int tt::transfer_points = 6;
         }
 
         save_data();
-        return ();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
 
     }
 
@@ -811,7 +884,8 @@ const int tt::transfer_points = 6;
         send_invites_to_a_dao(pending_invitations);
 
         save_data();
-        return ();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
 
     }
 
@@ -821,7 +895,7 @@ const int tt::transfer_points = 6;
 
         ~strdump("Start deploy message processing");
 
-        throw_unless(666, equal_slices(sender_address, root_address));
+        throw_unless(666, equal_slices(sender_address, a_dao_master));
         transaction_fee = in_msg_body~load_uint(32);
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
@@ -844,6 +918,7 @@ const int tt::transfer_points = 6;
         active? = false;
 
         save_data();
+        just_notify_master(op, tt::transaction_without_type);
         return();
 
     }
@@ -860,7 +935,7 @@ const int tt::transfer_points = 6;
 
     return (
         active?, ;; int1
-        root_address, ;; slice
+        a_dao_master, ;; slice
         deployer_address, ;; slice
         transaction_fee, ;; uint32
         agreement_percent_numerator, ;; uint32
