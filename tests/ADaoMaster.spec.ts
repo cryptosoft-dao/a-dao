@@ -505,7 +505,7 @@ describe('ADaoMaster', () => {
         const proposeDistributeTon = await firstADao.sendProposeDistributeTon(wallet2.getSender(), toNano('0.33'), {
             Passcode: 2,
             Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
-            DistributionAmount: toNano(333),
+            DistributionAmount: toNano(200),
         })
 
         expect(proposeDistributeTon.transactions).toHaveTransaction({
@@ -520,6 +520,50 @@ describe('ADaoMaster', () => {
     });
 
     it('Should Approve Transaction: Distribute Ton', async () => {
+
+        // Wallet0 approves TON Distribution
+
+        const wallet0ApprovesTonDistribution = await firstADao.sendApprove(wallet0.getSender(), toNano('1'), {
+            Passcode: 0,
+            TransactionIndex: 0,
+        })
+
+        expect(wallet0ApprovesTonDistribution.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesTonDistribution.transactions);
+
+        // Wallet2 approves Withdraw Profit
+
+        const wallet2ApprovesTonDistribution = await firstADao.sendApprove(wallet2.getSender(), toNano('3'), {
+            Passcode: 2,
+            TransactionIndex: 0,
+        })
+
+        expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: wallet0.address,
+            success: true,
+        })
+
+        expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: wallet2.address,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesTonDistribution.transactions);
 
     });
 
