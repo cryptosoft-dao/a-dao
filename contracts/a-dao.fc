@@ -70,7 +70,8 @@ const int tt::delete_pending_transactions = 10;
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
-            ;; dict active_approves
+            ;; dict active_invitations_approves
+            ;; dict active_transactions_approves
     global cell authorized_addresses;
     global int total_approval_points; ;; uint32
     global int total_profit_points; ;;uint32
