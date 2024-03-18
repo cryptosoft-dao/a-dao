@@ -101,9 +101,26 @@ describe('ADaoMaster', () => {
         const ProfitableAddresses = beginCell().storeDictDirect(ProfitableAddressesDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
         const PendingInvitationsDict = Dictionary.empty<bigint, Cell>();
-        PendingInvitationsDict.set(BigInt(0), beginCell().storeAddress(wallet0.address).storeUint(28 ,32).storeUint(37, 32).endCell());
-        PendingInvitationsDict.set(BigInt(1), beginCell().storeAddress(wallet1.address).storeUint(35 ,32).storeUint(28, 32).endCell());
-        PendingInvitationsDict.set(BigInt(2), beginCell().storeAddress(wallet2.address).storeUint(37 ,32).storeUint(35, 32).endCell());
+        PendingInvitationsDict.set(
+            BigInt(0), 
+            beginCell()
+                .storeAddress(wallet0.address)
+                .storeUint(28 ,32)
+                .storeUint(37, 32)
+                .storeDict(Dictionary.empty()) // active_invitations_approves
+                .storeDict(Dictionary.empty()) // active_transactions_approves
+            .endCell()
+        );
+        PendingInvitationsDict.set(
+            BigInt(1), 
+            beginCell()
+                .storeAddress(wallet1.address)
+                .storeUint(35 ,32)
+                .storeUint(28, 32)
+                .storeDict(Dictionary.empty())
+                .storeDict(Dictionary.empty())
+            .endCell());
+        PendingInvitationsDict.set(BigInt(2), beginCell().storeAddress(wallet2.address).storeUint(37 ,32).storeUint(35, 32).storeDict(Dictionary.empty()).endCell());
         const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
 
         const ADaoMasterActivationResult = await firstADao.sendActivateADao(deployer.getSender(), toNano('0.33'), {

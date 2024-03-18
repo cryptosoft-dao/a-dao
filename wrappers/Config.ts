@@ -14,11 +14,12 @@ export const ADaoOperationCodes = {
     ActivateADao: 2,
     ProposeTransaction: 3,
     ApproveTransaction: 4,
-    AcceptInvitationToADao: 5,
-    BuyPoints: 6,
-    InviteToADao: 7,
-    ChangeMyAddress: 8,
-    QuitADao: 9,
+    GetProfit: 5,
+    AcceptInvitationToADao: 6,
+    BuyPoints: 7,
+    InviteToADao: 8,
+    ChangeMyAddress: 9,
+    QuitADao: 10,
 };
 
 export const ADaoTransactionTypes = {

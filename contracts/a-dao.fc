@@ -7,11 +7,12 @@ const int op::master_log = 1;
 const int op::activate_a_dao = 2;
 const int op::propose_transaction = 3;
 const int op::approve_transaction = 4;
-const int op::accept_invitation_to_a_dao = 5;
-const int op::buy_points = 6;
-const int op::invite_to_a_dao = 7;
-const int op::change_my_address = 8;
-const int op::quit_a_dao = 9;
+const int op::get_profit = 5;
+const int op::accept_invitation_to_a_dao = 6;
+const int op::buy_points = 7;
+const int op::invite_to_a_dao = 8;
+const int op::change_my_address = 9;
+const int op::quit_a_dao = 10;
 
 ;; Transaction Types
 
@@ -60,7 +61,7 @@ const int tt::delete_pending_transactions = 10;
             ;; int4 transaction_type
             ;; int32 deadline
             ;; cell transaction_info
-            ;; cell approves
+            ;; dict approves
             ;; int32 approval_points_recieved
     global cell pending_transactions;
     ;; udict authorized_addresses
@@ -69,6 +70,7 @@ const int tt::delete_pending_transactions = 10;
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
+            ;; dict active_approves
     global cell authorized_addresses;
     global int total_approval_points; ;; uint32
     global int total_profit_points; ;;uint32
@@ -246,12 +248,9 @@ const int tt::delete_pending_transactions = 10;
 
     if (op == op::approve_transaction) {
 
-        ;; Think about double approval!
-
         ~strdump("Start transaction approval");
 
         int transaction_index = in_msg_body~load_uint(32);
-        transaction_index~dump();
 
         ~strdump("Start sender authorization");
 
@@ -277,11 +276,12 @@ const int tt::delete_pending_transactions = 10;
         slice transaction_cs = transaction.begin_parse();
 
         int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
-        transaction_type~dump();
         int deadline = transaction_cs~load_uint(32); ;; deadline
         cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
         cell approves = transaction_cs~load_dict(); ;; approves
         int approval_points_recieved = transaction_cs~load_uint(32); ;; approval_points_recieved
+
+        ;; Check if not second approve
 
         ~strdump("Add approve to approves dictionary");
 
@@ -303,8 +303,6 @@ const int tt::delete_pending_transactions = 10;
         if (approval_points_recieved > approves_for_approval) {
 
             slice transaction_info_cs = transaction_info.begin_parse();
-
-            ;; Do pending_transactions
 
             if (transaction_type == tt::invite_address) {
 
@@ -356,20 +354,13 @@ const int tt::delete_pending_transactions = 10;
                 ~strdump("Decrease total points");
                 
                 int address_to_delete_sha256 = slice_hash(address_to_delete);
-                ~strdump("1");
                 (slice authorized_address_info_cs, int flag) = authorized_addresses.udict_get?(256, address_to_delete_sha256);
-                ~strdump("2");
                 authorized_address_info_cs~load_msg_addr(); ;; slice authorized_address
-                ~strdump("3");
                 int approval_points = authorized_address_info_cs~load_uint(32);
-                ~strdump("4");
                 int profit_points = authorized_address_info_cs~load_uint(32);
-                ~strdump("5");
 
                 total_approval_points = total_approval_points - approval_points;
-                ~strdump("6");
                 total_profit_points = total_profit_points - profit_points;
-                ~strdump("7");
 
                 ~strdump("Delete address from dict");
 
@@ -383,7 +374,6 @@ const int tt::delete_pending_transactions = 10;
 
             }
 
-            ;; Send transaction to dApp for profit withdrawal
             if (transaction_type == tt::withdraw_profit) {
 
                 ~strdump("Start Transaction Approval: Withdraw Profit");
@@ -504,9 +494,13 @@ const int tt::delete_pending_transactions = 10;
                 slice points_sender_address = transaction_info_cs~load_msg_addr();
                 int new_sender_approval_points = transaction_info_cs~load_uint(32);
                 int new_sender_profit_points = transaction_info_cs~load_uint(32);
+                cell new_sender_active_invitations_approves = transaction_info_cs~load_dict();
+                cell new_sender_active_transactions_approves = transaction_info_cs~load_dict();
                 slice destination_address = transaction_info_cs~load_msg_addr();
                 int approval_points_transfer = transaction_info_cs~load_uint(32);
                 int profit_points_transfer = transaction_info_cs~load_uint(32);
+                cell active_invitations_approves = transaction_info_cs~load_dict();
+                cell active_transactions_approves = transaction_info_cs~load_dict();
 
                 int sender_address_sha256 = slice_hash(sender_address);
                 (cell authorized_addresses, int flag) = authorized_addresses.udict_delete?(256, sender_address_sha256);
@@ -526,7 +520,7 @@ const int tt::delete_pending_transactions = 10;
 
                 (slice authorized_address_info_cs, int flag) = authorized_addresses.udict_get?(256, slice_hash(destination_address));
 
-                
+                ;; Transfer active approves & devide approval_points
 
                 ;; (slice authorized_address_info_cs, flag)
 
@@ -617,9 +611,9 @@ const int tt::delete_pending_transactions = 10;
 
             ~strdump("Start Proposal: Invite Address");
 
-            transaction_info_cs~load_msg_addr(); ;; slice address_to_invite
-            transaction_info_cs~load_uint(32); ;; int approval_points
-            transaction_info_cs~load_uint(32); ;; int profit_points
+            slice address_to_invite = transaction_info_cs~load_msg_addr();
+            int approval_points = transaction_info_cs~load_uint(32);
+            int profit_points = transaction_info_cs~load_uint(32);
 
             ~strdump("Add transaction to pending_transactions");
 
@@ -629,7 +623,15 @@ const int tt::delete_pending_transactions = 10;
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
-                    .store_ref(transaction_info)
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(address_to_invite)
+                            .store_uint(approval_points, 32)
+                            .store_uint(profit_points, 32)
+                            .store_dict(new_dict()) ;; dict active_invitations_approvals
+                            .store_dict(new_dict()) ;; dict active_transaction_approvals
+                        .end_cell()
+                    )
                     .store_dict(approves)
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
@@ -785,6 +787,8 @@ const int tt::delete_pending_transactions = 10;
             transaction_info_cs~load_msg_addr(); ;; slice destination
             transaction_info_cs~load_uint(32); ;; int approval_points
             transaction_info_cs~load_uint(32); ;; int profit_points
+            transaction_info_cs~load_dict(); ;; dict active_invitations_approves
+            transaction_info_cs~load_dict(); ;; dict active_transactions_approves
 
             ~strdump("Add transaction to pending_transactions");
 
@@ -817,6 +821,12 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::delete_pending_transactions) {
 
         }
+
+    }
+
+    if (op == op::get_profit) {
+        
+        ;; Increase total_profit_reserved
 
     }
 
