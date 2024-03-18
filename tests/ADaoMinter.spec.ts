@@ -280,7 +280,9 @@ describe('ADaoMinter', () => {
 
     });
 
-    it('Wallet0 should approve wallet3 invitation', async () => {
+    it('Should Approve Transaction: Invite Address wallet3', async () => {
+
+        // Wallet0 approves Wallet3 invitation to A DAO
 
         const wallet0ApprovesWallet3Invitation = await firstADao.sendApproveInviteAddress(wallet0.getSender(), toNano('0.33'), {
             Passcode: 0,
@@ -296,9 +298,7 @@ describe('ADaoMinter', () => {
 
         printTransactionFees(wallet0ApprovesWallet3Invitation.transactions);
 
-    });
-
-    it('Wallet2 should approve wallet3 invitation', async () => {
+        // Wallet2 approves Wallet3 invitation to A DAO
 
         const wallet2ApprovesWallet3Invitation = await firstADao.sendApproveInviteAddress(wallet2.getSender(), toNano('0.33'), {
             Passcode: 2,
@@ -312,11 +312,25 @@ describe('ADaoMinter', () => {
             success: true,
         })
 
+        // Send invitation to wallet3
+
+        expect(wallet2ApprovesWallet3Invitation.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: wallet3.address,
+            success: true,
+            op: ADaoOperationCodes.InviteToADao,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.InviteToADao, 32)
+                    .storeUint(3, 32)
+                    .storeUint(46, 32)
+                    .storeUint(46, 32)
+                .endCell(),
+        })
+
         printTransactionFees(wallet2ApprovesWallet3Invitation.transactions);
 
-    });
-
-    it('Wallet3 should accept invitation', async () => {
+        // Wallet3 accepts invitation to A DAO
 
         const wallet3AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet3.getSender(), toNano('0.33'), {
             Passcode: 3,
@@ -377,6 +391,10 @@ describe('ADaoMinter', () => {
 
     });
 
+    it('Should Approve Transaction: Delete Address', async () => {
+
+    });
+
     it('Should Propose Transaction: Withdraw Profit', async () => {
 
         const proposeWithdrawProfit = await firstADao.sendProposeWithdrawProfit(wallet2.getSender(), toNano('0.33'), {
@@ -392,6 +410,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(proposeWithdrawProfit.transactions);
+
+    });
+
+    it('Should Approve Transaction: Withdraw Profit', async () => {
 
     });
 
@@ -411,6 +433,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(proposeDistributeTon.transactions);
+
+    });
+
+    it('Should Approve Transaction: Distribute Ton', async () => {
 
     });
 
@@ -435,6 +461,10 @@ describe('ADaoMinter', () => {
 
     });
 
+    it('Should Approve Transaction: Arbitrary Transaction', async () => {
+
+    });
+
     it('Should Propose Transaction: Update Agreement Percent', async () => {
 
         const proposeUpdateAgreementPercent = await firstADao.sendProposeUpdateAgreementPercent(wallet2.getSender(), toNano('0.33'), {
@@ -452,6 +482,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(proposeUpdateAgreementPercent.transactions);
+
+    });
+
+    it('Should Approve Transaction: Update Agreement Percent', async () => {
 
     });
 
@@ -473,6 +507,10 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(proposeTransferPoints.transactions);
+
+    });
+
+    it('Should Approve Transaction: Transfer Points', async () => {
 
     });
 
