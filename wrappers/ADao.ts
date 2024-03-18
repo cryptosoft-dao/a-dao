@@ -299,7 +299,7 @@ export class ADao implements Contract {
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
                     .storeUint(opts.Passcode, 32)
-                    .storeUint(ADaoTransactionTypes.DestributeTon, 32)
+                    .storeUint(ADaoTransactionTypes.DistributeTon, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()

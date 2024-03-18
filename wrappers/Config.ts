@@ -21,7 +21,7 @@ export const ADaoTransactionTypes = {
     InviteAddress: 0,
     DeleteAddress: 1,
     WithdrawProfit: 2,
-    DestributeTon: 3,
+    DistributeTon: 3,
     ArbitraryTransaction: 4,
     UpdateAgreementPercent: 5,
     TransferPoint: 6,

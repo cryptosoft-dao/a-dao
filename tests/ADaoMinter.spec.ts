@@ -225,10 +225,6 @@ describe('ADaoMinter', () => {
         expect(ADaoDataAfterWallet2In.total_approval_points).toStrictEqual(BigInt(100));
         expect(ADaoDataAfterWallet2In.total_profit_points).toStrictEqual(BigInt(100));
 
-        // Deploy A Careers
-
-        
-
     });
 
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
@@ -415,6 +411,68 @@ describe('ADaoMinter', () => {
         })
 
         printTransactionFees(proposeDistributeTon.transactions);
+
+    });
+
+    it('Should Propose Transaction: Arbitrary Transaction', async () => {
+
+        const proposeArbitraryTransaction = await firstADao.sendProposeArbitraryTransaction(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            Destination: wallet5.address,
+            Amount: toNano(0.33),
+            MsgBody: beginCell().endCell()
+        })
+
+        expect(proposeArbitraryTransaction.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeArbitraryTransaction.transactions);
+
+    });
+
+    it('Should Propose Transaction: Update Agreement Percent', async () => {
+
+        const proposeUpdateAgreementPercent = await firstADao.sendProposeUpdateAgreementPercent(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            AgreementPercentNumerator: BigInt(33),
+            AgreementPercentDenumerator: BigInt(33),
+        })
+
+        expect(proposeUpdateAgreementPercent.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeUpdateAgreementPercent.transactions);
+
+    });
+
+    it('Should Propose Transaction: Transfer Points', async () => {
+
+        const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), {
+            Passcode: 2,
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            Destination: wallet5.address,
+            ApprovalPoints: BigInt(10),
+            ProfitPoints: BigInt(10),
+        })
+
+        expect(proposeTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeTransferPoints.transactions);
 
     });
 

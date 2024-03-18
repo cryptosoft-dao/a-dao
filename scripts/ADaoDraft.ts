@@ -1,8 +1,5 @@
 import { Address, beginCell, toNano, Builder, Cell, Dictionary, Slice } from '@ton/core';
 import { NetworkProvider } from '@ton/blueprint';
-import {
-
-} from '../tests/utils/buildContent';
 import { sha256Hash } from '../tests/utils/Helpers';
 
 enum Operations {
