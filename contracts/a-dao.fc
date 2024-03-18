@@ -80,6 +80,7 @@ const int tt::delete_pending_transactions = 10;
 ;; Storage functions
 
 () save_data() impure inline {
+
     ~strdump("Start save_data()");
     set_data(
         begin_cell()
@@ -101,12 +102,12 @@ const int tt::delete_pending_transactions = 10;
         .end_cell()
     );
     ~strdump("End save_data()");
+
 }
 
 () load_data() impure inline { 
 
     ~strdump("Start load_data()");
-
     slice ds = get_data().begin_parse();
     active? = ds~load_int(1);
     a_dao_master = ds~load_msg_addr();
@@ -115,7 +116,6 @@ const int tt::delete_pending_transactions = 10;
     if (active? == false) {
 
         ~strdump("active? == false");
-
         transaction_fee = 0;
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
@@ -132,7 +132,6 @@ const int tt::delete_pending_transactions = 10;
     } else {
 
         ~strdump("active? == true");
-
         transaction_fee = ds~load_uint(32);
         agreement_percent_numerator = ds~load_uint(32);
         agreement_percent_denominator = ds~load_uint(32);
@@ -167,7 +166,6 @@ const int tt::delete_pending_transactions = 10;
             .end_cell()
         )
     .end_cell();
-
     send_raw_message(msg, 1);
 
 }
@@ -175,17 +173,14 @@ const int tt::delete_pending_transactions = 10;
 () send_invites_to_a_dao(cell pending_invitations) impure inline {
 
     ~strdump("Start sending invites to A DAO");
-
     (int passcode, cell authorized_address_info, int flag) = pending_invitations.udict_get_min_ref?(32);
 
     while (flag) {
 
         slice authorized_address_info_cs = authorized_address_info.begin_parse();
-
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
         int approval_points = authorized_address_info_cs~load_uint(32);
         int profit_points = authorized_address_info_cs~load_uint(32);
-
         cell msg = 
             begin_cell()
                 .store_uint(0x18, 6)
@@ -201,17 +196,12 @@ const int tt::delete_pending_transactions = 10;
                     .end_cell()
                 )
             .end_cell();
-
         send_raw_message(msg, 0);
-
         passcode += 1;
-
         (authorized_address_info, flag) = pending_invitations.udict_get_ref?(32, passcode);
-
         active? = true;
         
     }
-
     ~strdump("Terminate sending invites to A DAO");
 
 }
@@ -219,63 +209,43 @@ const int tt::delete_pending_transactions = 10;
 () clear_pending_transactions_queue(cell pending_transactions) inline {
 
     (int key, slice transaction_info, int success?) = pending_transactions.udict_get_min?(256);
-
     while (success?) {
-        (key, transaction_info, success?) = pending_transactions.udict_get_next?(256, key);
 
+        (key, transaction_info, success?) = pending_transactions.udict_get_next?(256, key);
         transaction_info~skip_bits(8); ;; skip transaction_type
         transaction_info~load_uint(32); ;; deadline
+
     }
 
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     
-    if (in_msg_body.slice_empty?()) {
-        return ();
-    }
-
+    if (in_msg_body.slice_empty?()) { return (); }
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
-
-    if (flags & 1) {  ;; ignore bounced messages
-        return ();
-    }
-
+    if (flags & 1) { return (); }
     int op = in_msg_body~load_uint(32);
-
     load_data();
 
     if (op == op::approve_transaction) {
 
         ~strdump("Start transaction approval");
-
         int transaction_index = in_msg_body~load_uint(32);
-
         ~strdump("Start sender authorization");
-
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
-
-        success?~dump();
         throw_unless(222, success? & equal_slices(sender_address, authorized_address));
-
         ~strdump("Start points parsing");
-
         int approval_points = authorized_address_info_cs~load_uint(32);
         int profit_points = authorized_address_info_cs~load_uint(32);
-
         ~strdump("Get transaction by transaction_index");
-
         (cell transaction, int flag) = pending_transactions.udict_get_ref?(32, transaction_index);
         throw_unless(200, flag);
-
         ~strdump("Parse transaction");
-
         slice transaction_cs = transaction.begin_parse();
-
         int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
         int deadline = transaction_cs~load_uint(32); ;; deadline
         cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
@@ -285,20 +255,14 @@ const int tt::delete_pending_transactions = 10;
         ;; Check if not second approve
 
         ~strdump("Add approve to approves dictionary");
-
         int sender_address_sha256 = slice_hash(sender_address);
         int success? = approves~udict_add?(256, sender_address_sha256, transaction_cs);
-
         ~strdump("Count approves");
-
         int approves_for_approval = total_approval_points * agreement_percent_numerator / agreement_percent_denominator;
         approval_points_recieved = approval_points_recieved + approval_points;
-
         ~strdump("Delete old transaction state from pending_transactions");
-
         (pending_transactions, int flag) = pending_transactions.udict_delete?(32, transaction_index);
         throw_unless(666, flag);
-
         ~strdump("Start check if sufficient approves to start actions");
 
         if (approval_points_recieved > approves_for_approval) {
@@ -308,20 +272,14 @@ const int tt::delete_pending_transactions = 10;
             if (transaction_type == tt::invite_address) {
 
                 ~strdump("Start Transaction Approval: Invite Address");
-
                 (int last_passcode, _, _) = pending_invitations.udict_get_max_ref?(32);
                 int passcode = last_passcode + 1;
-
                 slice authorized_address = transaction_info_cs~load_msg_addr(); ;; slice address_to_add_addr
                 int approval_points = transaction_info_cs~load_uint(32);
                 int profit_points = transaction_info_cs~load_uint(32); ;; int profit_points
-
                 ~strdump("Add address to pending invitations");
-
                 pending_invitations~udict_set_ref(32, passcode, transaction_info);
-
                 ~strdump("Send invitation to authorized_address");
-
                 cell msg = 
                     begin_cell()
                         .store_uint(0x18, 6)
@@ -337,9 +295,7 @@ const int tt::delete_pending_transactions = 10;
                             .end_cell()
                         )
                     .end_cell();
-
                 send_raw_message(msg, 0);
-
                 save_data();
                 just_notify_master(op, transaction_type);
                 return();
@@ -349,24 +305,17 @@ const int tt::delete_pending_transactions = 10;
             if (transaction_type == tt::delete_address) {
 
                 ~strdump("Start Transaction Approval: Delete Address");
-
                 slice address_to_delete = transaction_info_cs~load_msg_addr();
-
                 ~strdump("Decrease total points");
-                
                 int address_to_delete_sha256 = slice_hash(address_to_delete);
                 (slice authorized_address_info_cs, int flag) = authorized_addresses.udict_get?(256, address_to_delete_sha256);
                 authorized_address_info_cs~load_msg_addr(); ;; slice authorized_address
                 int approval_points = authorized_address_info_cs~load_uint(32);
                 int profit_points = authorized_address_info_cs~load_uint(32);
-
                 total_approval_points = total_approval_points - approval_points;
                 total_profit_points = total_profit_points - profit_points;
-
                 ~strdump("Delete address from dict");
-
                 (authorized_addresses, int flag) = authorized_addresses.udict_delete?(256, address_to_delete_sha256);
-
                 save_data();
                 total_approval_points~dump();
                 total_profit_points~dump();
@@ -378,13 +327,11 @@ const int tt::delete_pending_transactions = 10;
             if (transaction_type == tt::withdraw_profit) {
 
                 ~strdump("Start Transaction Approval: Withdraw Profit");
-
                 int profitable_address_passcode = transaction_info_cs~load_uint(32);
                 (cell profitable_address_info, int flag) = profitable_addresses.udict_get_ref?(32, profitable_address_passcode);
                 throw_unless(222, flag);
                 slice profitable_address_info_cs = profitable_address_info.begin_parse();
                 slice profitable_address = profitable_address_info_cs~load_msg_addr();
-
                 var msg = begin_cell()
                     .store_uint(0x18, 6)
                     .store_slice(profitable_address)
@@ -396,9 +343,7 @@ const int tt::delete_pending_transactions = 10;
                         .end_cell()
                     )
                 .end_cell();
-
                 send_raw_message(msg, 0);
-
                 save_data();
                 just_notify_master(op, transaction_type);
                 return();
@@ -408,26 +353,18 @@ const int tt::delete_pending_transactions = 10;
             if (transaction_type == tt::distribute_ton) {
 
                 ~strdump("Start Transaction Approval: Distribute Ton");
-
                 int ton_to_distribute = transaction_info_cs~load_coins(); ;; int amount
-
                 ~strdump("Start sending TON to authorized addresses");
-
                 (int key, slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get_min?(256);
-
                 ~strdump("Start sending TON to authorized addresses");
 
                 while (success?) {
 
                     ~strdump("In while cycle");
-
                     slice address = authorized_address_info_cs~load_msg_addr();
                     int approval_points = authorized_address_info_cs~load_uint(32);
                     int profit_points = authorized_address_info_cs~load_uint(32);
-                    profit_points~dump();
-
                     int ton_amount_to_address = ton_to_distribute / total_profit_points * profit_points;
-                
                     var msg = begin_cell()
                         .store_uint(0x10, 6)
                         .store_slice(address)
@@ -435,7 +372,6 @@ const int tt::delete_pending_transactions = 10;
                         .store_uint(0, 107)
                         .end_cell();
                     send_raw_message(msg, 0);
-
                     (key, authorized_address_info_cs, success?) = authorized_addresses.udict_get_next?(256, key);
 
                 }
@@ -561,9 +497,9 @@ const int tt::delete_pending_transactions = 10;
         
         }
 
-            save_data();
-            just_notify_master(op, tt::transaction_without_type);
-            return();
+        save_data();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
 
     }
 
@@ -572,52 +508,39 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::propose_transaction) {
 
         ~strdump("Start transaction proposal");
-
-        ;; Check if sender is an authorized routing pool wallet
-
         ~strdump("Start proposal initiator authorization");
-
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
         throw_unless(222, success? & equal_slices(sender_address, authorized_address));
-
         ~strdump("Start proposal parsing");
-
         int transaction_type = in_msg_body.preload_uint(32);
         transaction_type~dump();
         int deadline = in_msg_body.preload_uint(32);
         cell transaction_info = in_msg_body.preload_ref();
-
         ~strdump("Get max pending_transactions index");
-
         (int max_transaction_index, _, int flag) = pending_transactions.udict_get_max?(32);
 
         if (~ flag) {
+
             max_transaction_index = -1;
+
         }
 
         max_transaction_index~dump();
-
         ~strdump("Convert transaction_info to slice");
-
         slice transaction_info_cs = transaction_info.begin_parse();
-
         ~strdump("Set zero approves");
-
         cell approves = new_dict();
         int approval_points_recieved = 0;
 
         if (transaction_type == tt::invite_address) {
 
             ~strdump("Start Proposal: Invite Address");
-
             slice address_to_invite = transaction_info_cs~load_msg_addr();
             int approval_points = transaction_info_cs~load_uint(32);
             int profit_points = transaction_info_cs~load_uint(32);
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -637,7 +560,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -647,11 +569,8 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::delete_address) {
 
             ~strdump("Start Transaction Proposal: Delete Address");
-
             transaction_info_cs~load_msg_addr(); ;; slice address_to_delete
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -663,7 +582,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -673,11 +591,8 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::withdraw_profit) {
 
             ~strdump("Start Transaction Proposal: Withdraw Profit");
-
             transaction_info_cs~load_uint(32); ;; int profitable_address_passcode
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -689,7 +604,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -699,11 +613,8 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::distribute_ton) {
 
             ~strdump("Start Transaction Proposal: Distribute Ton");
-
             transaction_info_cs~load_coins(); ;; int distribution_amount
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -715,7 +626,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -725,17 +635,12 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::arbitrary_transaction) {
 
             ~strdump("Start Transaction Proposal: Arbitrary Transaction");
-
             transaction_info_cs~load_msg_addr(); ;; destination
             int amount = transaction_info_cs~load_coins(); ;; amount
             transaction_info_cs~load_ref(); ;; msg_body
-
             ~strdump("Check the integrity of reserves");
-
             throw_if(666, amount > my_balance - total_profit_reserved);
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -747,22 +652,18 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
-            return();
+            return(); 
 
         }
 
         if (transaction_type == tt::update_agreement_percent) {
 
             ~strdump("Start Transaction Proposal: Update Agreement Percent");
-
             transaction_info_cs~load_uint(32); ;; int agreement_percent_numerator
             transaction_info_cs~load_uint(32); ;; int agreement_percent_denominator
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -774,7 +675,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -784,15 +684,12 @@ const int tt::delete_pending_transactions = 10;
         if (transaction_type == tt::transfer_points) {
 
             ~strdump("Start Transaction Proposal: Transfer Points");
-
             transaction_info_cs~load_msg_addr(); ;; slice destination
             transaction_info_cs~load_uint(32); ;; int approval_points
             transaction_info_cs~load_uint(32); ;; int profit_points
             transaction_info_cs~load_dict(); ;; dict active_invitations_approves
             transaction_info_cs~load_dict(); ;; dict active_transactions_approves
-
             ~strdump("Add transaction to pending_transactions");
-
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 
@@ -804,7 +701,6 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
-
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -826,7 +722,7 @@ const int tt::delete_pending_transactions = 10;
     }
 
     if (op == op::get_profit) {
-        
+
         ;; Increase total_profit_reserved
 
     }
@@ -834,7 +730,6 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::change_my_address) {
 
         ~strdump("Start changing my address");
-
         slice new_authorized_address = in_msg_body~load_msg_addr();
         ~strdump("Start udict_get?");
         int sender_address_sha256 = slice_hash(sender_address);
@@ -842,31 +737,23 @@ const int tt::delete_pending_transactions = 10;
         flag~dump();
         authorized_address_info_cs~dump();
         ~strdump("End udict_get?");
-
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
 
-        ~strdump("1");
-
         if (flag & equal_slices(sender_address, authorized_address)) {
-
+            
             ~strdump("Sender authorized");
-
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
-
             ~strdump("Start authorized_address update");
-
             slice new_authorized_authorized_address_info = 
                 begin_cell()
                     .store_slice(new_authorized_address)
                     .store_uint(approval_points, 32)
                     .store_uint(profit_points, 32)
                 .end_cell().begin_parse();
-
             authorized_addresses~udict_set(256, slice_hash(new_authorized_address), new_authorized_authorized_address_info);
 
         }
-
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -876,34 +763,24 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::quit_a_dao) {
 
         ~strdump("Start quiting A DAO");
-
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int flag) = authorized_addresses.udict_get?(256, sender_address_sha256);
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
-
+        
         if (flag & equal_slices(sender_address, authorized_address)) {
 
             ~strdump("Sender authorized");
-
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
-
             ~strdump("Start authorized_address removal");
-
             int sender_address_sha256 = slice_hash(sender_address);
             (authorized_addresses, int flag) = authorized_addresses.udict_delete?(256, sender_address_sha256);
             throw_unless(666, flag);
-
             ~strdump("Start points update");
-
             total_approval_points -= approval_points;
             total_profit_points -= profit_points;
 
-            total_approval_points~dump();
-            total_profit_points~dump();
-
         }
-
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -913,34 +790,22 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::accept_invitation_to_a_dao) {
 
         ~strdump("Start accepting invitation to A DAO");
-
         int passcode = in_msg_body~load_uint(32);
         (cell authorized_address_info, int flag) = pending_invitations.udict_get_ref?(32, passcode);
         slice authorized_address_info_cs = authorized_address_info.begin_parse();
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
 
         if (flag & equal_slices(sender_address, authorized_address)) {
-
             ~strdump("Sender authorized");
-
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
-
             ~strdump("End authorized_address adding");
-
             int sender_address_sha256 = slice_hash(sender_address);
             authorized_addresses~udict_set(256, sender_address_sha256, authorized_address_info.begin_parse());
-
             ~strdump("Start points update");
-
             total_approval_points += approval_points;
             total_profit_points += profit_points;
-
-            total_approval_points~dump();
-            total_profit_points~dump();
-
         }
-
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -950,9 +815,7 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::activate_a_dao) {
 
         ~strdump("Start A DAO Activation");
-
         throw_unless(333, equal_slices(sender_address, deployer_address));
-
         active? = true;
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
@@ -960,9 +823,7 @@ const int tt::delete_pending_transactions = 10;
         profit_reserve_percent_denominator = in_msg_body~load_uint(32);
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
-
         send_invites_to_a_dao(pending_invitations);
-
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -974,7 +835,6 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::process_deploy_message) {
 
         ~strdump("Start deploy message processing");
-
         throw_unless(666, equal_slices(sender_address, a_dao_master));
         transaction_fee = in_msg_body~load_uint(32);
         agreement_percent_numerator = 0;
@@ -985,7 +845,6 @@ const int tt::delete_pending_transactions = 10;
             agreement_percent_numerator = in_msg_body~load_uint(32);
             agreement_percent_denominator = in_msg_body~load_uint(32);
             pending_invitations = in_msg_body~load_dict();
-
             send_invites_to_a_dao(pending_invitations);
 
         }
@@ -994,9 +853,7 @@ const int tt::delete_pending_transactions = 10;
         authorized_addresses = new_dict();
         total_approval_points = 0;
         total_profit_points = 0;
-
         active? = false;
-
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -1012,7 +869,6 @@ const int tt::delete_pending_transactions = 10;
 (int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
 
     load_data();
-
     return (
         active?, ;; int1
         a_dao_master, ;; slice
