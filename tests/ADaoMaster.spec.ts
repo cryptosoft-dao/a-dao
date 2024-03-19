@@ -633,7 +633,7 @@ describe('ADaoMaster', () => {
 
         const proposeUpdateAgreementPercent = await firstADao.sendProposeUpdateAgreementPercent(wallet2.getSender(), toNano('0.33'), {
             Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
-            AgreementPercentNumerator: BigInt(33),
+            AgreementPercentNumerator: BigInt(77),
             AgreementPercentDenumerator: BigInt(100),
         })
 
@@ -678,18 +678,18 @@ describe('ADaoMaster', () => {
             success: true,
         })
 
-        expect((await firstADao.getADaoData()).agreement_percent_numerator).toStrictEqual(BigInt(33));
+        expect((await firstADao.getADaoData()).agreement_percent_numerator).toStrictEqual(BigInt(77));
         expect((await firstADao.getADaoData()).agreement_percent_denominator).toStrictEqual(BigInt(100));
 
         printTransactionFees(wallet2ApprovesUpdateAgreementPercent.transactions);
 
     });
 
-    it('Should Propose Transaction: Transfer Points', async () => {
+    it('Should Propose Transaction: Transfer Points to new address', async () => {
 
         const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), {
             Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
-            Destination: wallet5.address,
+            Recipient: wallet5.address,
             ApprovalPoints: BigInt(10),
             ProfitPoints: BigInt(10),
         })
@@ -705,7 +705,91 @@ describe('ADaoMaster', () => {
 
     });
 
-    it('Should Approve Transaction: Transfer Points', async () => {
+    it('Should Approve Transaction: Transfer Points to new address', async () => {
+
+        // Wallet0 approves Transfer Points
+
+        const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), {
+            TransactionIndex: 0,
+        })
+
+        expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesTransferPoints.transactions);
+
+        // Wallet2 approves Transfer Points
+
+        const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), {
+            TransactionIndex: 0,
+        })
+
+        expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesTransferPoints.transactions);
+
+    });
+
+    it('Should Propose Transaction: Transfer Points To Authorized Address', async () => {
+
+        const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), {
+            Deadline: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+            Recipient: wallet2.address,
+            ApprovalPoints: BigInt(10),
+            ProfitPoints: BigInt(10),
+        })
+
+        expect(proposeTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeTransferPoints.transactions);
+
+    });
+
+    it('Should Approve Transaction: Transfer Points To Authorized Address', async () => {
+
+        // Wallet0 approves Transfer Points
+
+        const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), {
+            TransactionIndex: 0,
+        })
+
+        expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesTransferPoints.transactions);
+
+        // Wallet2 approves Transfer Points
+
+        const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), {
+            TransactionIndex: 0,
+        })
+
+        expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesTransferPoints.transactions);
 
     });
 

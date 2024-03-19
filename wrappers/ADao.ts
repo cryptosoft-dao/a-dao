@@ -373,7 +373,7 @@ export class ADao implements Contract {
         value: bigint,
         opts: {
             Deadline: number | bigint,
-            Destination: Address,
+            Recipient: Address,
             ApprovalPoints: number | bigint,
             ProfitPoints: number | bigint,
         }
@@ -384,11 +384,11 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.UpdateAgreementPercent, 32)
+                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
                     .storeUint(opts.Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
-                            .storeAddress(opts.Destination)
+                            .storeAddress(opts.Recipient)
                             .storeUint(opts.ApprovalPoints, 32)
                             .storeUint(opts.ProfitPoints, 32)
                         .endCell()

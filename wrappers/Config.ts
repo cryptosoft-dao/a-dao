@@ -30,7 +30,7 @@ export const ADaoTransactionTypes = {
     DistributeTon: 4,
     ArbitraryTransaction: 5,
     UpdateAgreementPercent: 6,
-    TransferPoint: 7,
+    TransferPoints: 7,
     PutUpPointsForSale: 8,
     DeletePendingInvitations: 9,
     DeletePendingTransactions: 10,
