@@ -1,0 +1,354 @@
+{
+  "ADao": {
+    "defaultAddress": "",
+    "tabName": "",
+    "sendFunctions": {
+      "sendActivateADao": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "AgreementPercentNumerator": {
+            "fieldTitle": ""
+          },
+          "AgreementPercentDenominator": {
+            "fieldTitle": ""
+          },
+          "ProfitReservePercentNumerator": {
+            "fieldTitle": ""
+          },
+          "ProfitReservePercentDenominator": {
+            "fieldTitle": ""
+          },
+          "ProfitableAddresses": {
+            "fieldTitle": ""
+          },
+          "PendingInvitations": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendTopUpBalance": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendAcceptInvitationToADao": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Passcode": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendQuitADao": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendChangeMyAddress": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "NewAddress": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeInviteAddress": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "AddressToInvite": {
+            "fieldTitle": ""
+          },
+          "ApprovalPoints": {
+            "fieldTitle": ""
+          },
+          "ProfitPoints": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeDeleteAddress": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "AddressToDelete": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeWithdrawProfit": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "ProfitableAddressPasscode": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeDistributeTon": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "DistributionAmount": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeArbitraryTransaction": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "Destination": {
+            "fieldTitle": ""
+          },
+          "Amount": {
+            "fieldTitle": ""
+          },
+          "MsgBody": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeUpdateAgreementPercent": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "AgreementPercentNumerator": {
+            "fieldTitle": ""
+          },
+          "AgreementPercentDenumerator": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeTransferPoints": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "Recipient": {
+            "fieldTitle": ""
+          },
+          "ApprovalPoints": {
+            "fieldTitle": ""
+          },
+          "ProfitPoints": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendApprove": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "TransactionIndex": {
+            "fieldTitle": ""
+          }
+        }
+      }
+    },
+    "getFunctions": {
+      "getADaoStatus": {
+        "tabName": "",
+        "params": {},
+        "outNames": []
+      },
+      "getADaoData": {
+        "tabName": "",
+        "params": {},
+        "outNames": []
+      }
+    },
+    "definedTypes": {
+      "ADaoConfig": {
+        "shownName": "",
+        "properties": {
+          "Active": {
+            "fieldTitle": ""
+          },
+          "RootAddress": {
+            "fieldTitle": ""
+          },
+          "DeployerAddressSHA256": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "ProfitableAddressValue": {
+        "shownName": "",
+        "properties": {
+          "address": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "PendingInvitationsValue": {
+        "shownName": "",
+        "properties": {
+          "address": {
+            "fieldTitle": ""
+          },
+          "approval_points": {
+            "fieldTitle": ""
+          },
+          "profit_points": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "ADaoData": {
+        "shownName": "",
+        "properties": {
+          "active": {
+            "fieldTitle": ""
+          },
+          "root_address": {
+            "fieldTitle": ""
+          },
+          "deployer_address": {
+            "fieldTitle": ""
+          },
+          "transaction_fee": {
+            "fieldTitle": ""
+          },
+          "agreement_percent_numerator": {
+            "fieldTitle": ""
+          },
+          "agreement_percent_denominator": {
+            "fieldTitle": ""
+          },
+          "profit_reserve_percent_numerator": {
+            "fieldTitle": ""
+          },
+          "profit_reserve_percent_denominator": {
+            "fieldTitle": ""
+          },
+          "profitable_addresses": {
+            "fieldTitle": ""
+          },
+          "pending_invitations": {
+            "fieldTitle": ""
+          },
+          "pending_transactions": {
+            "fieldTitle": ""
+          },
+          "authorized_addresses": {
+            "fieldTitle": ""
+          },
+          "total_approval_points": {
+            "fieldTitle": ""
+          },
+          "total_profit_points": {
+            "fieldTitle": ""
+          },
+          "total_profit_reserved": {
+            "fieldTitle": ""
+          }
+        }
+      }
+    }
+  },
+  "ADaoMaster": {
+    "defaultAddress": "",
+    "tabName": "",
+    "sendFunctions": {
+      "sendDeploy": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendDeployADao": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      }
+    },
+    "getFunctions": {
+      "getADaoAddressByDeployerAddress": {
+        "tabName": "",
+        "params": {
+          "deployer_address": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
+      }
+    },
+    "definedTypes": {
+      "ADaoMasterConfig": {
+        "shownName": "",
+        "properties": {
+          "OwnerAddress": {
+            "fieldTitle": ""
+          },
+          "ADaoCode": {
+            "fieldTitle": ""
+          },
+          "NextADaoCreationFee": {
+            "fieldTitle": ""
+          },
+          "NextADaoTransactionFee": {
+            "fieldTitle": ""
+          }
+        }
+      }
+    }
+  }
+}
