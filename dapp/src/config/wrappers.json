@@ -1,0 +1,316 @@
+{
+  "ADao": {
+    "sendFunctions": {
+      "sendActivateADao": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  AgreementPercentNumerator: bigint | number;\n  AgreementPercentDenominator: bigint | number;\n  ProfitReservePercentNumerator: bigint | number;\n  ProfitReservePercentDenominator: bigint | number;\n  ProfitableAddresses: Cell;\n  PendingInvitations: Cell;\n}",
+          "optional": false
+        }
+      },
+      "sendTopUpBalance": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        }
+      },
+      "sendAcceptInvitationToADao": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Passcode: bigint | number;\n}",
+          "optional": false
+        }
+      },
+      "sendQuitADao": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        }
+      },
+      "sendChangeMyAddress": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  NewAddress: Address;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeInviteAddress": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  AddressToInvite: Address;\n  ApprovalPoints: number | bigint;\n  ProfitPoints: number | bigint;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeDeleteAddress": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  AddressToDelete: Address;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeWithdrawProfit": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  ProfitableAddressPasscode: number | bigint;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeDistributeTon": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  DistributionAmount: number | bigint;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeArbitraryTransaction": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  Destination: Address;\n  Amount: number | bigint;\n  MsgBody: Cell;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeUpdateAgreementPercent": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  AgreementPercentNumerator: number | bigint;\n  AgreementPercentDenumerator: number | bigint;\n}",
+          "optional": false
+        }
+      },
+      "sendProposeTransferPoints": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  Deadline: number | bigint;\n  Recipient: Address;\n  ApprovalPoints: number | bigint;\n  ProfitPoints: number | bigint;\n}",
+          "optional": false
+        }
+      },
+      "sendApprove": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        },
+        "opts": {
+          "type": "{\n  TransactionIndex: number | bigint;\n}",
+          "optional": false
+        }
+      }
+    },
+    "getFunctions": {
+      "getADaoStatus": {},
+      "getADaoData": {}
+    },
+    "path": ".\\wrappers\\ADao.ts",
+    "deploy": {
+      "canBeCreatedFromConfig": true,
+      "configType": {
+        "Active": {
+          "type": "number",
+          "optional": false
+        },
+        "RootAddress": {
+          "type": "Address",
+          "optional": false
+        },
+        "DeployerAddressSHA256": {
+          "type": "bigint",
+          "optional": false
+        }
+      },
+      "codeHex": "b5ee9c72410248010018c8000114ff00f4a413f4bcf2c80b010201620244013ad0eda2edfb3221c700925f03e0d0d303fa40300171b0925f03e001d31f0304f08d0454dd185c9d081b1bd85917d9185d184a0a60fe1430ed44d0d20001f861fa4001f862fa4001f863f841c0008e3b308d041858dd1a5d994fc80f4f4819985b1cd960fe143070f86470f86570f86670f86770f8686df8696df86a6df86b6df86c70f86d70f86e70f86fe30e89fe143021c004e30221c0034546042302fc8d0694dd185c9d081d1c985b9cd858dd1a5bdb88185c1c1c9bdd985b20fe1430d31f308d0694dd185c9d081cd95b99195c88185d5d1a1bdc9a5e985d1a5bdba0fe143022f901f84c8307f40e6fa101fa405252c70512b0f2e0de8d0514dd185c9d081c1bda5b9d1cc81c185c9cda5b99e0fe1430d31f3089fe143001fe2005060048476574207472616e73616374696f6e206279207472616e73616374696f6e5f696e64657801fcf84b52108020f40f6fa1f2e0c88d0454185c9cd9481d1c985b9cd858dd1a5bdba0fe1430d0d31fd31fd4f404d31f8d08d0591908185c1c1c9bdd99481d1bc8185c1c1c9bdd985b1cc8191a58dd1a5bdb985c9e60fe143009f90149098307f436308bf436f756e7420617070726f76616c738fe1430f84df845a8f846a9040704ac5086a08d0d91195b195d19481bdb19081d1c985b9cd858dd1a5bdb881cdd185d1948199c9bdb481c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe1430f84b52508020f45b01f86bf2e29a89fe14305206bce30f080922420068537461727420636865636b2069662073756666696369656e7420617070726f76616c7320746f20737461727420616374696f6e7304fe316c223322d021c001e3023320c002e30220c0038ee5338d0ad4dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e8815da5d1a191c985dc8141c9bd99a5d20fe143001d31f30f8498020f40f6fa1f2e0ded0fa40308030c8cb1fc9718018c8cb055003cf16821013ab6680fa0212cb6accc970fb00e020c0040a0d2d1002fe348d0a94dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e88125b9d9a5d19481059191c995cdce0fe1430f84a8020f48f6fa53031a404fa40d31fd31f308d08905919081859191c995cdcc81d1bc81c195b991a5b99c81a5b9d9a5d185d1a5bdb9ce0fe1430f84a5426708020f417f86a89fe143078c8cb1f0b0c004a53656e6420696e7669746174696f6e20746f20617574686f72697a65645f61646472657373014816cb1f15cb1f13cb1fc9718018c8cb055005cf168209c9c380fa0214cb6a13ccc970fb003602fc338d0a94dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e8811195b195d19481059191c995cdce0fe143001fa40308d05511958dc99585cd9481d1bdd185b081c1bda5b9d1ce0fe1430f901f84c52108307f40e6fa130fa4031d31fd31f30f84d58a1f86df84e01a1f86e89fe1430f84c8307f45b30f86c0e0f003044656c65746520616464726573732066726f6d206469637401f08d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe1430f84dfe20f86df84efe20f86e013704f68ff5338d0a94dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e88111a5cdd1c9a589d5d1948151bdba0fe143001fa00308d0a54dd185c9d081cd95b991a5b99c81513d3881d1bc8185d5d1a1bdc9a5e9959081859191c995cdcd95ce0fe1430f84c8307f4866fa589fe1430908ae85f03e020c00511122d13005253746172742073656e64696e6720544f4e20746f20617574686f72697a656420616464726573736573007e8be496e207768696c65206379636c658fe143001fa40d31f31d31f30f84e5240a90401a8708010c8cb055003cf1601fa02cb6ac970fb00f84c8307f47c6fa503f08edd8d0c54dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e88105c989a5d1c985c9e48151c985b9cd858dd1a5bdba0fe143002fa40d31fd430f84f16a15210bcf2d29a718018c8cb055003cf1601fa02cb6a13ccc970fb00e03322c006e30222c007e3023121c0083021c0093001c00a30361415018a8d0d14dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e88155c19185d19481059dc99595b595b9d0814195c98d95b9d20fe143001d31f01f865d31f30f8662d01fc8d0ad4dd185c9d08151c985b9cd858dd1a5bdb88105c1c1c9bdd985b0e88151c985b9cd9995c88141bda5b9d1ce0fe14308d0594185c9cd9481d1c985b9cd858dd1a5bdb881a5b999be0fe143001fa40fa40d31fd31f308d0591d95d081c1bda5b9d1cc81cd95b99195c881a5b999be0fe143023f901f84c8307f40e6fa11604fef2e29ad31fd31ff404f404308d09d0da1958dac81c9958da5c1a595b9d081a5b88185d5d1a1bdc9a5e995917d859191c995cdcd95ce0fe143026f90137f84c178307f40e6fa1e30f8d0890dbdd5b9d081b995dc8185c1c1c9bdd985b0809881c1c9bd99a5d081c1bda5b9d1ce0fe143058a159a189fe143022f901f84c8307171e1f2002fe8d0c5c9958da5c1a595b9d081859191c995cdcc81c1c995cd95b9d081a5b88185d5d1a1bdc9a5e995917d859191c995cdcd95ce0fe1430d31f31d31f31f404f404308d0b10dbdd5b9d081b995dc81c9958da5c1a595b9d08185c1c1c9bdd985b0809881c1c9bd99a5d081c1bda5b9d1ce0fe143089fe1430228020f4866fa518190078537461727420726563697069656e7420262073656e64657220696e7669746174696f6e7320617070726f76616c73206861726d6f6e697a6174696f6e02e66d6d91228e9553368020f40e6fa1995420438020f4165044e30d14e810575f078d0f54dd185c9d081c9958da5c1a595b9d0809881cd95b99195c881d1c985b9cd858dd1a5bdb9cc8185c1c1c9bdd985b1cc81a185c9b5bdb9a5e985d1a5bdba0fe14306d6d278020f4866fa591208ae85f06341a1b00fc8d0a555c19185d19481b995dd7dc9958da5c1a595b9d17d85c1c1c9bdd995917da5b9d9a5d185d1a5bdb9ce0fe1430d31f302ca0c8cb1fc9d05420438020f4168d09955c19185d19481b995dd7dcd95b99195c97d85c1c1c9bdd995917da5b9d9a5d185d1a5bdb9ce0fe143004d31f511ca1c8cb1fc9d05420438020f416012e53158020f40e6fa1995420268020f4164013e30d4413021c01fc8d0a955c19185d19481b995dd7dc9958da5c1a595b9d17d85c1c1c9bdd995917dd1c985b9cd858dd1a5bdb9ce0fe1430d31f302aa0c8cb1fc9d05420268020f4168d09d55c19185d19481b995dd7dcd95b99195c97d85c1c1c9bdd995917dd1c985b9cd858dd1a5bdb9ce0fe143002d31f511aa1c8cb1fc9d054202580201d0004f41600d45b348d0e1c9958da5c1a595b9d081859191c995cdcc81a5cc81b9bdd081c1c995cd95b9d081a5b88185d5d1a1bdc9a5e995917d859191c995cdcd95ce0fe14308d0910dc99585d19481cd95b99195c97d85c1c1c9bdd995917dd1c985b9cd858dd1a5bdb9cc820fe1430007844656c6574652063757272656e7420706f696e74732073656e6465722073746174652066726f6d20617574686f72697a65645f61646472657373657302a8f45b01f86cf2e29a8d07d059190818dd5c9c995b9d081c1bda5b9d1cc81cd95b99195c881cdd185d1960fe143021c30021c300b08e16c823cf1612cb1fcb1fc9d001f901f84c8307f416f86c925f03e289fe1430212d008244656c65746520616464726573732066726f6d20617574686f72697a65645f61646472657373657320696620616c6c20706f696e7473207472616e73666572656400be378d0fd4d85d99481b995dc81d1c985b9cd858dd1a5bdb881cdd185d19481a59881b9bdd081cdd59999a58da595b9d081c1bda5b9d1cc8199bdc881858dd1a5bdb9ce0fe143001c8cb1fcb1f15cc13f40012cb1fc9f84b41308020f417f86b04e89133e30d20c0053020c0098f638d0654dd185c9d0818da185b99da5b99c81b5e481859191c995cdce0fe143002fa40308d0414dd185c9d081d591a58dd17d9d95d0fe0fe143021f901f84c8307f40e6fa18be456e642075646963745f6765743f8fe143001fa405044c705b0915be30de020c00a2438423901fe8d0694dd185c9d081d1c985b9cd858dd1a5bdb881c1c9bdc1bdcd85b20fe14308d0994dd185c9d081c1c9bdc1bdcd85b081a5b9a5d1a585d1bdc88185d5d1a1bdc9a5e985d1a5bdba0fe143022f901f84c8307f40e6fa101fa405252c70512b0f2e0de8d0594dd185c9d081c1c9bdc1bdcd85b081c185c9cda5b99e0fe14302504fc21d70b1f22d70b1f23d74c8d0891d95d081b585e081c195b991a5b99d7dd1c985b9cd858dd1a5bdb9cc81a5b99195e20fe1430f84b8020f48e6fa56c12b392307fde8d0850dbdb9d995c9d081d1c985b9cd858dd1a5bdb97da5b999bc81d1bc81cdb1a58d960fe143021d089fe14306d7026c001e30226c002e30226c0032627292a0024536574207a65726f20617070726f76616c7301fe34363637378d0794dd185c9d08141c9bdc1bdcd85b0e88125b9d9a5d19481059191c995cdce0fe143003fa40d31fd31f308d09d05919081d1c985b9cd858dd1a5bdb881d1bc81c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe14306d6dc85005cf1613cb1fcb1f12f400f400c921c8cb1f14cb1f13ccf40014cb1fc92801f002a4f84b10238020f417f86b8d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe1430013701f632363637378d0a94dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e8811195b195d19481059191c995cdce0fe14308d09d05919081d1c985b9cd858dd1a5bdb881d1bc81c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe143021c8cb1fcb1f16ccf400cb1fc902a4f84b10238020f417f86b2d02fe8efc32363637378d0ad4dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e8815da5d1a191c985dc8141c9bd99a5d20fe14308d09d05919081d1c985b9cd858dd1a5bdb881d1bc81c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe143021c8cb1fcb1f16ccf400cb1fc902a4f84b10238020f417f86be02d2b042826c004e30226c005e3023b25c006e3023324c0072c2e303201f632363637378d0a94dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e88111a5cdd1c9a589d5d1948151bdba0fe14308d09d05919081d1c985b9cd858dd1a5bdb881d1bc81c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe143021c8cb1fcb1f16ccf400cb1fc902a4f84b10238020f417f86b2d01d88d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe1430013702fc3737388d0c54dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e88105c989a5d1c985c9e48151c985b9cd858dd1a5bdba0fe143007fa4031fa00308d07d0da1958dac81d1a19481a5b9d1959dc9a5d1e481bd9881c995cd95c9d995ce0fe1430f84f19a118bcf2d29a89fe143021c8cb1fcb1f16cc12f400342f01f6cb1fc902a4f84b10238020f417f86b8d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe1430013701fe313535368d0d14dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e88155c19185d19481059dc99595b595b9d0814195c98d95b9d20fe14308d09d05919081d1c985b9cd858dd1a5bdb881d1bc81c195b991a5b99d7dd1c985b9cd858dd1a5bdb9ce0fe143021c8cb1fcb1f15ccf40014cb1fc903a4f84b10243101e28020f417f86b8d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe1430370126e30210455f053423c0083023c0093003c00a303302fe368d0ad4dd185c9d08151c985b9cd858dd1a5bdb88141c9bdc1bdcd85b0e88151c985b9cd9995c88141bda5b9d1ce0fe143005fa40d31fd31f308d0650da1958dac81c1bda5b9d1cc8185d985a5b18589a5b1a5d1e60fe143006d31fd31f305222bcf2d29a5260bcf2d30989fe1430c85009cf1601cf1617cb1f13cb1fc9213435004e416464207472616e73616374696f6e20746f2070656e64696e675f7472616e73616374696f6e730136c8cb1f13cb1f12cc14f40014cb1fc903a4f84b10248020f417f86b3601d68d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe143037003c01c8cb1fcb1fc9718010c8cb05f842cf16f844fa02cb6accc971fb00db3100b08d0454d95b99195c88185d5d1a1bdc9a5e995920fe143001d31fd31f308d07d4dd185c9d08185d5d1a1bdc9a5e995917d859191c995cdcc81d5c19185d1960fe1430c823cf1612cb1fcb1fc9d001f901f84c8307f416f86c04a08f45328d04d4dd185c9d081c5d5a5d1a5b99c81048111053e0fe143020f901f84c8307f40e6fa18be456e642075646963745f6765743f8fe143001fa405232c70512b0915be30de020c006e30220c0023a423b3d00ec8d0454d95b99195c88185d5d1a1bdc9a5e995920fe1430d31fd31f308d0814dd185c9d08185d5d1a1bdc9a5e995917d859191c995cdcc81c995b5bdd985b20fe143002f901f84c8307f45b01f86cf2e29a8d04d4dd185c9d081c1bda5b9d1cc81d5c19185d1960fe1430f84d01a1f86df84e01a1f86e02888d08d4dd185c9d081858d8d95c1d1a5b99c81a5b9d9a5d185d1a5bdb881d1bc81048111053e0fe143002d31f30f84a8020f40f6fa121d0fa405242c70512b0925f03e30d3c4200e68d0454d95b99195c88185d5d1a1bdc9a5e995920fe1430d31fd31f308d07515b9908185d5d1a1bdc9a5e995917d859191c995cdcc81859191a5b99e0fe143003f90102d0f84c41308307f416f86c8d04d4dd185c9d081c1bda5b9d1cc81d5c19185d1960fe1430f84d01a0f86df84e01a0f86e02ac8ec88d0594dd185c9d081048111053c81058dd1a5d985d1a5bdba0fe1430f84312c705f2e14d7ff86101d31f01f865d31f01f866d31f01f867d31f01f868f40401f869f40430f86af84ae020c000e3025f03840ff2f03e3f02e48d0794dd185c9d081cd95b991a5b99c81a5b9d9a5d195cc81d1bc81048111053e0fe1430208020f4876fa5908e3d01d0fa40d31fd31f3078c8cb1f5240cb1f12cb1fcb1fc9718018c8cb055003cf168209c9c380fa0212cb6accc970fb00a453018020f40f6fa17ff86112e85f0389fe1430414202c68d07d4dd185c9d0819195c1b1bde481b595cdcd859d9481c1c9bd8d95cdcda5b99e0fe1430f84212c705f2e29a01d31f01f86470f86570f86620d749c2008e91d31f01f865d31f01f866f40430f86af84a9130e26df86b6df86c70f86d70f86e70f861404201e48d0794dd185c9d081cd95b991a5b99c81a5b9d9a5d195cc81d1bc81048111053e0fe1430208020f4876fa5908e3d01d0fa40d31fd31f3078c8cb1f5240cb1f12cb1fcb1fc9718018c8cb055003cf168209c9c380fa0212cb6accc970fb00a453018020f40f6fa17ff86112e85f0389fe14304100445465726d696e6174652073656e64696e6720696e766974657320746f20412044414f01d88d0454dd185c9d081cd85d9957d9185d184a0a60fe1430f84ff84ef84df84cf84bf84af849f848f847f846f845f844f841c8ca00f842cf16f843cf16cb1fcb1fcb1fcb1fcb1ff400f400f400f400cb1fcb1fcb1fc9ed548bf456e6420736176655f6461746128298fe14307043003801c8cb1fcb1fc9718010c8cb05f842cf16f844fa02cb6accc971fb0003f9a16d051a08a9ba30b93a103637b0b22fb230ba309414c1fc2861da89a1a40003f0c3f48003f0c5f48003f0c7f08380011c76611a0830b1ba34bb329f901e9e903330b639b2c1fc2860e1f0c8e1f0cae1f0cce1f0cee1f0d0dbf0d2dbf0d4dbf0d6dbf0d8e1f0dae1f0dce1f0dfc61d13fc2861f083f085f087f089f08b45464700a28bf6163746976653f203d3d20747275658fe1430d31f01f864d31f01f865d31f01f866d31f01f867d31f01f868f40401f869f40401f86af40401f86bf40401f86cd31f01f86dd31f01f86ed31f01f86fd1001e456e64206c6f61645f6461746128290028f846f847f848f849f84af84bf84cf84df84ef84fa477f6c6"
+    },
+    "definedTypes": {
+      "ADaoConfig": {
+        "Active": {
+          "type": "number",
+          "optional": false
+        },
+        "RootAddress": {
+          "type": "Address",
+          "optional": false
+        },
+        "DeployerAddressSHA256": {
+          "type": "bigint",
+          "optional": false
+        }
+      },
+      "ProfitableAddressValue": {
+        "address": {
+          "type": "Address",
+          "optional": false
+        }
+      },
+      "PendingInvitationsValue": {
+        "address": {
+          "type": "Address",
+          "optional": false
+        },
+        "approval_points": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "profit_points": {
+          "type": "number | bigint",
+          "optional": false
+        }
+      },
+      "ADaoData": {
+        "active": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "root_address": {
+          "type": "Address",
+          "optional": false
+        },
+        "deployer_address": {
+          "type": "Address",
+          "optional": false
+        },
+        "transaction_fee": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "agreement_percent_numerator": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "agreement_percent_denominator": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "profit_reserve_percent_numerator": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "profit_reserve_percent_denominator": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "profitable_addresses": {
+          "type": "Cell | null",
+          "optional": false
+        },
+        "pending_invitations": {
+          "type": "Cell | null",
+          "optional": false
+        },
+        "pending_transactions": {
+          "type": "Cell | null",
+          "optional": false
+        },
+        "authorized_addresses": {
+          "type": "Cell | null",
+          "optional": false
+        },
+        "total_approval_points": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "total_profit_points": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "total_profit_reserved": {
+          "type": "number | bigint",
+          "optional": false
+        }
+      }
+    }
+  },
+  "ADaoMaster": {
+    "sendFunctions": {
+      "sendDeploy": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        }
+      },
+      "sendDeployADao": {
+        "value": {
+          "type": "bigint",
+          "optional": false
+        }
+      }
+    },
+    "getFunctions": {
+      "getADaoAddressByDeployerAddress": {
+        "deployer_address": {
+          "type": "Address",
+          "optional": false
+        }
+      }
+    },
+    "path": ".\\wrappers\\ADaoMaster.ts",
+    "deploy": {
+      "canBeCreatedFromConfig": true,
+      "configType": {
+        "OwnerAddress": {
+          "type": "Address",
+          "optional": false
+        },
+        "ADaoCode": {
+          "type": "Cell",
+          "optional": false
+        },
+        "NextADaoCreationFee": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "NextADaoTransactionFee": {
+          "type": "number | bigint",
+          "optional": false
+        }
+      },
+      "codeHex": "b5ee9c7241010a0100db000114ff00f4a413f4bcf2c80b0102016202070202cd0306020120040500c5433d0d303fa40300171b0925f038e52ed44d0fa4001f861d401f862fa0001f863fa0001f864d122c70033028e32f843bcf2e29af842f00320f004f84470c8cb1fcb1fc9778018c8cb055003cf16821005f5e100fa0212cb6b12ccccc970fb00e05be280033570c8ca00f828cf1658cf16c97020c8cb0113f400f400cb00c98001bd7c80383a6465816503e5ffe4e840201660809003fb520bda89a1f48003f0c3a803f0c5f40003f0c7f40003f0c9a3f085e007e00900009b65eff0870929693e5"
+    },
+    "definedTypes": {
+      "ADaoMasterConfig": {
+        "OwnerAddress": {
+          "type": "Address",
+          "optional": false
+        },
+        "ADaoCode": {
+          "type": "Cell",
+          "optional": false
+        },
+        "NextADaoCreationFee": {
+          "type": "number | bigint",
+          "optional": false
+        },
+        "NextADaoTransactionFee": {
+          "type": "number | bigint",
+          "optional": false
+        }
+      }
+    }
+  }
+}
