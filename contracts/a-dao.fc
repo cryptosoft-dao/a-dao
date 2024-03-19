@@ -7,7 +7,7 @@ const int op::master_log = 1;
 const int op::activate_a_dao = 2;
 const int op::propose_transaction = 3;
 const int op::approve_transaction = 4;
-const int op::get_profit = 5;
+const int op::collect_profit = 5;
 const int op::accept_invitation_to_a_dao = 6;
 const int op::buy_points = 7;
 const int op::invite_to_a_dao = 8;
@@ -97,7 +97,7 @@ const int tt::delete_pending_transactions = 10;
             .store_dict(authorized_addresses)
             .store_uint(total_approval_points, 32)
             .store_uint(total_profit_points, 32)
-            .store_uint(total_profit_reserved, 32)
+            .store_coins(total_profit_reserved)
         .end_cell()
     );
     ~strdump("End save_data()");
@@ -136,7 +136,7 @@ const int tt::delete_pending_transactions = 10;
         authorized_addresses = ds~load_dict();
         total_approval_points = ds~load_uint(32);
         total_profit_points = ds~load_uint(32); 
-        total_profit_reserved = ds~load_uint(32);
+        total_profit_reserved = ds~load_coins();
         ds.end_parse();
     }
     ~strdump("End load_data()");
@@ -691,14 +691,52 @@ const int tt::delete_pending_transactions = 10;
 
         }
         if (transaction_type == tt::delete_pending_invitations) {
-
+            ~strdump("Start Transaction Proposal: Delete Pending Invitations");
+            transaction_info_cs~load_dict(); ;; dict pending_invitations_for_removal
+            ~strdump("Add transaction to pending_transactions");
+            pending_transactions~udict_set_ref(
+                32, 
+                max_transaction_index + 1, 
+                begin_cell()
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
+                    .store_dict(approvals)
+                    .store_uint(approval_points_recieved, 32)
+                .end_cell()
+            );
+            save_data();
+            just_notify_master(op, transaction_type);
+            return();
         }
         if (transaction_type == tt::delete_pending_transactions) {
-
+            ~strdump("Start Transaction Proposal: Delete Pending Transactions");
+            transaction_info_cs~load_dict(); ;; dict pending_transactions_for_removal
+            ~strdump("Add transaction to pending_transactions");
+            pending_transactions~udict_set_ref(
+                32, 
+                max_transaction_index + 1, 
+                begin_cell()
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(transaction_info)
+                    .store_dict(approvals)
+                    .store_uint(approval_points_recieved, 32)
+                .end_cell()
+            );
+            save_data();
+            just_notify_master(op, transaction_type);
+            return();
         }
     }
-    if (op == op::get_profit) {
-        ;; Increase total_profit_reserved
+    if (op == op::collect_profit) {
+        ~strdump("Start profit collecting");
+        total_profit_reserved~dump();
+        total_profit_reserved = msg_value * profit_reserve_percent_numerator / profit_reserve_percent_denominator + total_profit_reserved;
+        total_profit_reserved~dump();
+        save_data();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
     }
     if (op == op::change_my_address) {
         ~strdump("Start changing my address");
@@ -747,7 +785,6 @@ const int tt::delete_pending_transactions = 10;
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
-
     }
     if (op == op::accept_invitation_to_a_dao) {
         ~strdump("Start accepting invitation to A DAO");
@@ -784,7 +821,6 @@ const int tt::delete_pending_transactions = 10;
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
-
     }
     if (op == op::process_deploy_message) {
         ~strdump("Start deploy message processing");

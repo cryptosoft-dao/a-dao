@@ -491,16 +491,17 @@ describe('ADaoMaster', () => {
 
         printTransactionFees(wallet2ApprovesWithdrawProfit.transactions);
 
-        const topUpBalance = await firstADao.sendTopUpBalance(profitableAddress.getSender(), toNano(333));
+        const collectProfit = await firstADao.sendProfit(profitableAddress.getSender(), toNano(333));
 
-        expect(topUpBalance.transactions).toHaveTransaction({
+        expect(collectProfit.transactions).toHaveTransaction({
             from: profitableAddress.address,
             to: firstADao.address,
             value: toNano(333),
             success: true,
+            op: ADaoOperationCodes.CollectProfit,
         })
 
-        printTransactionFees(topUpBalance.transactions);
+        printTransactionFees(collectProfit.transactions);
 
     });
 
@@ -790,6 +791,22 @@ describe('ADaoMaster', () => {
         })
 
         printTransactionFees(wallet2ApprovesTransferPoints.transactions);
+
+    });
+
+    it('Should Propose Transaction: Delete Pending Invitations', async () => {
+
+    });
+
+    it('Should Approve Transaction: Delete Pending Invitations', async () => {
+
+    });
+
+    it('Should Propose Transaction: Delete Pending Transactions', async () => {
+
+    });
+
+    it('Should Approve Transaction: Delete Pending Transactions', async () => {
 
     });
 

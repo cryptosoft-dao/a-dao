@@ -191,6 +191,21 @@ export class ADao implements Contract {
         });
     }
 
+    async sendProfit(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body:
+                beginCell()
+                    .storeUint(ADaoOperationCodes.CollectProfit, 32)
+                .endCell()
+        });
+    }
+
     // Propose transaction
 
     async sendProposeInviteAddress(
@@ -371,6 +386,54 @@ export class ADao implements Contract {
                             .storeAddress(Recipient)
                             .storeUint(ApprovalPoints, 32)
                             .storeUint(ProfitPoints, 32)
+                        .endCell()
+                    )
+                .endCell()
+        });
+    }
+
+    async sendProposeDeletePendingInvitations(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        Deadline: number | bigint,
+        PendingInvitationsForRemoval: Cell,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeMaybeRef(PendingInvitationsForRemoval)
+                        .endCell()
+                    )
+                .endCell()
+        });
+    }
+
+    async sendProposeDeleteTransactionsInvitations(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        Deadline: number | bigint,
+        PendingTransactionsForRemoval: Cell,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeMaybeRef(PendingTransactionsForRemoval)
                         .endCell()
                     )
                 .endCell()

@@ -14,7 +14,7 @@ export const ADaoOperationCodes = {
     ActivateADao: 2,
     ProposeTransaction: 3,
     ApproveTransaction: 4,
-    GetProfit: 5,
+    CollectProfit: 5,
     AcceptInvitationToADao: 6,
     BuyPoints: 7,
     InviteToADao: 8,

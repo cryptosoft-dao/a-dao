@@ -196,18 +196,54 @@
             "fieldTitle": ""
           }
         }
+      },
+      "sendProposeDeletePendingInvitations": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "PendingInvitationsForRemoval": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeDeleteTransactionsInvitations": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "PendingTransactionsForRemoval": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProfit": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
       }
     },
     "getFunctions": {
       "getADaoStatus": {
         "tabName": "",
         "params": {},
-        "outNames": []
+        "outNames": {}
       },
       "getADaoData": {
         "tabName": "",
         "params": {},
-        "outNames": []
+        "outNames": {}
       }
     },
     "definedTypes": {
@@ -328,7 +364,7 @@
             "fieldTitle": ""
           }
         },
-        "outNames": []
+        "outNames": {}
       }
     },
     "definedTypes": {
