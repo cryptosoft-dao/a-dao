@@ -251,6 +251,7 @@ const int tt::delete_pending_transactions = 10;
                 int approval_points = transaction_info_cs~load_uint(32);
                 int profit_points = transaction_info_cs~load_uint(32); ;; int profit_points
                 ~strdump("Add address to pending invitations");
+                passcode~dump();
                 pending_invitations~udict_set_ref(32, passcode, transaction_info);
                 ~strdump("Send invitation to authorized_address");
                 cell msg = 
@@ -556,6 +557,7 @@ const int tt::delete_pending_transactions = 10;
             int approval_points = transaction_info_cs~load_uint(32);
             int profit_points = transaction_info_cs~load_uint(32);
             ~strdump("Add transaction to pending_transactions");
+            max_transaction_index~dump();
             pending_transactions~udict_set_ref(
                 32, 
                 max_transaction_index + 1, 

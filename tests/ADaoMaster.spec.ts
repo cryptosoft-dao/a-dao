@@ -23,6 +23,7 @@ describe('ADaoMaster', () => {
     let wallet3: SandboxContract<TreasuryContract>;
     let wallet4: SandboxContract<TreasuryContract>;
     let wallet5: SandboxContract<TreasuryContract>;
+    let wallet6: SandboxContract<TreasuryContract>;
     let profitableAddress: SandboxContract<TreasuryContract>;
 
     let ADaoMasterCode: Cell;
@@ -43,6 +44,7 @@ describe('ADaoMaster', () => {
         wallet3 = await blockchain.treasury('wallet3');
         wallet4 = await blockchain.treasury('wallet4');
         wallet5 = await blockchain.treasury('wallet5');
+        wallet6 = await blockchain.treasury('wallet5');
         profitableAddress = await blockchain.treasury('profitableAddress');
 
         // Params
@@ -795,11 +797,203 @@ describe('ADaoMaster', () => {
 
     it('Should Propose Transaction: Delete Pending Invitations', async () => {
 
-        // Create pending invitations
+        // Create first Invite Address pending transactions
+
+        const proposeWallet4Invitation = await firstADao.sendProposeInviteAddress(wallet0.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            wallet3.address, // AddressToInvite
+            BigInt(46), // ApprovalPoints
+            BigInt(46), // ProfitPoints
+        )
+
+        expect(proposeWallet4Invitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet4Invitation.transactions);
+
+        // Wallet0 approves wallet4 invitation
+
+        const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesTransferPoints.transactions);
+
+        // Wallet2 approves wallet4 invitation
+
+        const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesTransferPoints.transactions);
+
+        // Create second Invite Address pending transactions
+
+        const proposeWallet5Invitation = await firstADao.sendProposeInviteAddress(wallet0.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            wallet3.address, // AddressToInvite
+            BigInt(46), // ApprovalPoints
+            BigInt(46), // ProfitPoints
+        )
+
+        expect(proposeWallet5Invitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet5Invitation.transactions);
+
+        // Wallet0 approves wallet5 invitation
+
+        const wallet0ApprovesWallet5Invitation = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesWallet5Invitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesWallet5Invitation.transactions);
+
+        // Wallet2 approves wallet5 invitation
+
+        const wallet2ApprovesWallet5Invitation = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesWallet5Invitation.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesWallet5Invitation.transactions);
+
+        // Create third Invite Address pending transactions
+
+        const proposeWallet6Invitation = await firstADao.sendProposeInviteAddress(wallet0.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            wallet6.address, // AddressToInvite
+            BigInt(46), // ApprovalPoints
+            BigInt(46), // ProfitPoints
+        )
+
+        expect(proposeWallet6Invitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeWallet6Invitation.transactions);
+
+        // Wallet0 approves wallet6 invitation
+
+        const wallet0ApprovesWallet6Invitation = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesWallet6Invitation.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesWallet6Invitation.transactions);
+
+        // Wallet2 approves wallet6 invitation
+
+        const wallet2ApprovesWallet6Invitation = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesWallet6Invitation.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesWallet6Invitation.transactions);
+
+        const PendingInvitationsForRemovalDict = Dictionary.empty<bigint, Slice>();
+        PendingInvitationsForRemovalDict.set(BigInt(0), beginCell().endCell().beginParse());
+        PendingInvitationsForRemovalDict.set(BigInt(1), beginCell().endCell().beginParse());
+        PendingInvitationsForRemovalDict.set(BigInt(2), beginCell().endCell().beginParse());
+        const PendingInvitationsForRemoval = beginCell().storeDictDirect(PendingInvitationsForRemovalDict, Dictionary.Keys.BigUint(32), createSliceValue()).endCell();
+
+        const sendProposeDeletePendingInvitations = await firstADao.sendProposeDeletePendingTransactions(wallet2.getSender(), toNano('0.33'),
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            PendingInvitationsForRemoval
+        )
+
+        expect(sendProposeDeletePendingInvitations.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        });
+
+        printTransactionFees(sendProposeDeletePendingInvitations.transactions);
 
     });
 
     it('Should Approve Transaction: Delete Pending Invitations', async () => {
+
+        // Wallet0 approves Delete Pending Invitations
+
+        const wallet0ApprovesDeletePendingInvitations = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesDeletePendingInvitations.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesDeletePendingInvitations.transactions);
+
+        // Wallet2 approves Delete Pending Invitations
+
+        const wallet2ApprovesDeletePendingInvitations = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            0, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesDeletePendingInvitations.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesDeletePendingInvitations.transactions);
 
     });
 
@@ -852,7 +1046,7 @@ describe('ADaoMaster', () => {
 
         printTransactionFees(proposeDistributeTon.transactions);
 
-        // Send proposal
+        // Propose Delete Pending transactions
 
         const PendingTransactionsForRemovalDict = Dictionary.empty<bigint, Slice>();
         PendingTransactionsForRemovalDict.set(BigInt(0), beginCell().endCell().beginParse());
@@ -906,6 +1100,7 @@ describe('ADaoMaster', () => {
         })
 
         printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
+
     });
 
 });
