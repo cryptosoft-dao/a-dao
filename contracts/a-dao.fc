@@ -1,3 +1,5 @@
+;; Imports
+
 #include "stdlib.fc";
 
 ;; Operation Codes
@@ -450,7 +452,7 @@ const int tt::delete_pending_transactions = 10;
                         (int approved_address_sha256, slice sender_approved_invitation_cs, int success?) = sender_approved_transactions.udict_get_next?(256, approved_address_sha256);
                     }
                 } else {
-                    ~strdump("recipient address is not present in authorized_addresses");
+                    ~strdump("recipient address is not present in authorized_addresses"); ;; add from accept invitations
 
                     ~strdump("Create sender_approved_transactions ");
 
@@ -484,10 +486,34 @@ const int tt::delete_pending_transactions = 10;
 
             }
             if (transaction_type == tt::delete_pending_invitations) {
-
+                ~strdump("Start Transaction Approval: Delete Pending Invitations");
+                cell pending_invitations_for_removal = transaction_info_cs~load_dict();
+                ~strdump("Parse pending_invitations_for_removal dictionary");
+                (int key, slice pending_invitation_for_removal, int success?) = pending_invitations_for_removal.udict_get_min?(32);
+                while (success?) {
+                    ~strdump("Remove pending_invitation_for_removal");
+                    int passcode = pending_invitation_for_removal~load_uint(32);
+                    (pending_invitations, int flag) = pending_invitations.udict_delete?(32, passcode);
+                    (int key, slice pending_invitation_for_removal, int success?) = pending_invitations_for_removal.udict_get_next?(32, key);
+                }
+                save_data();
+                just_notify_master(op, transaction_type);
+                return();
             }
             if (transaction_type == tt::delete_pending_transactions) {
-
+                ~strdump("Start Transaction Approval: Delete Pending Transactions");
+                cell pending_transactions_for_removal = transaction_info_cs~load_dict();
+                ~strdump("Parse pending_transactions_for_removal dictionary");
+                (int key, slice pending_invitation_for_removal, int success?) = pending_transactions_for_removal.udict_get_min?(32);
+                while (success?) {
+                    ~strdump("Remove pending_invitation_for_removal");
+                    int transaction_index_for_removal = pending_invitation_for_removal~load_uint(32);
+                    (pending_transactions, int flag) = pending_transactions.udict_delete?(32, transaction_index_for_removal);
+                    (int key, slice pending_invitation_for_removal, int success?) = pending_transactions_for_removal.udict_get_next?(32, key);
+                }
+                save_data();
+                just_notify_master(op, transaction_type);
+                return();
             }
         } else {
             ~strdump("Save new transaction state if not sufficient points for actions");
@@ -849,7 +875,6 @@ const int tt::delete_pending_transactions = 10;
 ;; Custom get-methods
 
 (int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
-
     load_data();
     return (
         active?, ;; int1
@@ -868,5 +893,4 @@ const int tt::delete_pending_transactions = 10;
         total_profit_points, ;; uint32
         total_profit_reserved ;; uint32
     );
-
 }

@@ -796,6 +796,8 @@ describe('ADaoMaster', () => {
 
     it('Should Propose Transaction: Delete Pending Invitations', async () => {
 
+        // Create pending invitations
+
     });
 
     it('Should Approve Transaction: Delete Pending Invitations', async () => {
@@ -803,6 +805,53 @@ describe('ADaoMaster', () => {
     });
 
     it('Should Propose Transaction: Delete Pending Transactions', async () => {
+
+        // Create 3 pending transactions
+
+        const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            wallet2.address, // Recipient
+            BigInt(10), // ApprovalPoints
+            BigInt(10), // ProfitPoints
+        )
+
+        expect(proposeTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeTransferPoints.transactions);
+
+        const proposeUpdateAgreementPercent = await firstADao.sendProposeUpdateAgreementPercent(wallet2.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            BigInt(77), // AgreementPercentNumerator
+            BigInt(100), // AgreementPercentDenumerator
+        )
+
+        expect(proposeUpdateAgreementPercent.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeUpdateAgreementPercent.transactions);
+
+        const proposeDistributeTon = await firstADao.sendProposeDistributeTon(wallet2.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            toNano(200), // DistributionAmount
+        )
+
+        expect(proposeDistributeTon.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeDistributeTon.transactions);
 
     });
 
