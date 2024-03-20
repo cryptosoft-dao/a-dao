@@ -230,10 +230,11 @@ const int tt::delete_pending_transactions = 10;
         cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
         cell approvals = transaction_cs~load_dict(); ;; approvals
         int approval_points_recieved = transaction_cs~load_uint(32); ;; approval_points_recieved
-        ;; Check if not second approve
         ~strdump("Add approve to approvals dictionary");
         int sender_address_sha256 = slice_hash(sender_address);
-        int success? = approvals~udict_add?(256, sender_address_sha256, transaction_cs);
+        (approvals, int success?) = approvals.udict_add?(256, sender_address_sha256, transaction_cs);
+        ~strdump("Throw if double approval");
+        throw_unless(666, success?);
         ~strdump("Count approvals");
         int approvals_for_approval = total_approval_points * agreement_percent_numerator / agreement_percent_denominator;
         approval_points_recieved = approval_points_recieved + approval_points;
