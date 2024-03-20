@@ -15,6 +15,7 @@ import {
 import { ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
 import { Slice } from '@ton/core';
 
+
 export type ADaoData = {
     active: number | bigint;
     root_address: Address;
@@ -39,40 +40,12 @@ export type ADaoConfig = {
     DeployerAddressSHA256: bigint;
 }
 
-function createSliceValue(): DictionaryValue<Slice> {
-    return {
-        serialize: (src, builder) => {
-            builder.storeSlice(src);
-        },
-        parse: (src) => {
-            return src;
-        }
-    };
-}
-
 export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     return beginCell()
         .storeUint(config.Active, 1) // false value
         .storeAddress(config.RootAddress)
         .storeUint(config.DeployerAddressSHA256, 256)
     .endCell();
-}
-
-export type ProfitableAddressValue = {
-    address: Address,
-}
-
-export function createProfitableAddressesValue(): DictionaryValue<ProfitableAddressValue> {
-    return {
-        serialize(src: ProfitableAddressValue, builder: Builder) {
-            builder.storeAddress(src.address);
-        },
-        parse: (src: Slice) => {
-            return {
-                address: src.loadAddress(),
-            };
-        },
-    };
 }
 
 export type PendingInvitationsValue = {
@@ -496,7 +469,6 @@ export class ADao implements Contract {
         const total_approval_points = result.stack.readBigNumber();
         const total_profit_points = result.stack.readBigNumber();
         const total_profit_reserved = result.stack.readBigNumber();
-
 
         return {
             active,
