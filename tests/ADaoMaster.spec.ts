@@ -251,8 +251,6 @@ describe('ADaoMaster', () => {
 
     it('Empty test', async () => {});
 
-    /*
-
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
 
         const wallet2ChangesAddressToWallet2 = await firstADao.sendChangeMyAddress(wallet2.getSender(), toNano('0.33'), 
@@ -1110,7 +1108,5 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
 
     });
-
-    */
 
 });
