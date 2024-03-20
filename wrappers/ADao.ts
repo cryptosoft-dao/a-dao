@@ -39,6 +39,17 @@ export type ADaoConfig = {
     DeployerAddressSHA256: bigint;
 }
 
+function createSliceValue(): DictionaryValue<Slice> {
+    return {
+        serialize: (src, builder) => {
+            builder.storeSlice(src);
+        },
+        parse: (src) => {
+            return src;
+        }
+    };
+}
+
 export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     return beginCell()
         .storeUint(config.Active, 1) // false value
@@ -405,7 +416,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(ADaoTransactionTypes.DeletePendingTransactions, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
@@ -416,7 +427,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProposeDeleteTransactionsInvitations(
+    async sendProposeDeletePendingTransactions(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -429,7 +440,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(ADaoTransactionTypes.DeletePendingTransactions, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()

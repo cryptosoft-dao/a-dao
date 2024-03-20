@@ -492,9 +492,8 @@ const int tt::delete_pending_transactions = 10;
                 (int key, slice pending_invitation_for_removal, int success?) = pending_invitations_for_removal.udict_get_min?(32);
                 while (success?) {
                     ~strdump("Remove pending_invitation_for_removal");
-                    int passcode = pending_invitation_for_removal~load_uint(32);
-                    (pending_invitations, int flag) = pending_invitations.udict_delete?(32, passcode);
-                    (int key, slice pending_invitation_for_removal, int success?) = pending_invitations_for_removal.udict_get_next?(32, key);
+                    (pending_invitations, int flag) = pending_invitations.udict_delete?(32, key);
+                    (key, slice pending_invitation_for_removal, int success?) = pending_invitations_for_removal.udict_get_next?(32, key);
                 }
                 save_data();
                 just_notify_master(op, transaction_type);
@@ -504,12 +503,12 @@ const int tt::delete_pending_transactions = 10;
                 ~strdump("Start Transaction Approval: Delete Pending Transactions");
                 cell pending_transactions_for_removal = transaction_info_cs~load_dict();
                 ~strdump("Parse pending_transactions_for_removal dictionary");
-                (int key, slice pending_invitation_for_removal, int success?) = pending_transactions_for_removal.udict_get_min?(32);
+                (int key, slice pending_transaction_for_removal, int success?) = pending_transactions_for_removal.udict_get_min?(32);
                 while (success?) {
-                    ~strdump("Remove pending_invitation_for_removal");
-                    int transaction_index_for_removal = pending_invitation_for_removal~load_uint(32);
-                    (pending_transactions, int flag) = pending_transactions.udict_delete?(32, transaction_index_for_removal);
-                    (int key, slice pending_invitation_for_removal, int success?) = pending_transactions_for_removal.udict_get_next?(32, key);
+                    ~strdump("Remove pending_transaction_for_removal");
+                    (pending_transactions, int flag) = pending_transactions.udict_delete?(32, key);
+                    (key, slice pending_transaction_for_removal, success?) = pending_transactions_for_removal.udict_get_next?(32, key);
+                    success?~dump();
                 }
                 save_data();
                 just_notify_master(op, transaction_type);

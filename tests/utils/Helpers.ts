@@ -1,5 +1,16 @@
 import sha256 from 'crypto-js/sha256';
-import { Address, beginCell } from '@ton/core';
+import { Address, beginCell, DictionaryValue, Slice } from '@ton/core';
+
+export function createSliceValue(): DictionaryValue<Slice> {
+    return {
+        serialize: (src, builder) => {
+            builder.storeSlice(src);
+        },
+        parse: (src) => {
+            return src;
+        }
+    };
+}
 
 export function sha256Hash(input: string): bigint {
     const hash = sha256(input);

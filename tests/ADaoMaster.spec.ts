@@ -1,10 +1,11 @@
 import { Blockchain, BlockchainSnapshot, internal, SandboxContract, TreasuryContract, printTransactionFees } from '@ton/sandbox';
-import { Address, beginCell, Cell, Dictionary, Slice, toNano, TransactionDescriptionGeneric } from '@ton/core';
+import { beginCell, Cell, Dictionary, Slice, toNano } from '@ton/core';
 import { ADaoMaster } from '../wrappers/ADaoMaster';
 import { ADao } from '../wrappers/ADao';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { ADaoOperationCodes } from '../wrappers/Config';
+import { createSliceValue } from './utils/Helpers';
 
 describe('ADaoMaster', () => {
 
@@ -93,8 +94,6 @@ describe('ADaoMaster', () => {
         */
 
         // Activate a-dao
-
-        const bufferToBigInt = (val: Buffer) => BigInt('0x' + val.toString('hex'));
 
         const ProfitableAddressesDict = Dictionary.empty<bigint, Cell>();
         ProfitableAddressesDict.set(BigInt(0), beginCell().storeAddress(profitableAddress.address).endCell());
@@ -853,10 +852,60 @@ describe('ADaoMaster', () => {
 
         printTransactionFees(proposeDistributeTon.transactions);
 
+        // Send proposal
+
+        const PendingTransactionsForRemovalDict = Dictionary.empty<bigint, Slice>();
+        PendingTransactionsForRemovalDict.set(BigInt(0), beginCell().endCell().beginParse());
+        PendingTransactionsForRemovalDict.set(BigInt(1), beginCell().endCell().beginParse());
+        const PendingTransactionsForRemoval = beginCell().storeDictDirect(PendingTransactionsForRemovalDict, Dictionary.Keys.BigUint(32), createSliceValue()).endCell();
+
+        const proposeDeletePendingTransactions = await firstADao.sendProposeDeletePendingTransactions(wallet2.getSender(), toNano('0.33'),
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            PendingTransactionsForRemoval
+        );
+
+        expect(proposeDeletePendingTransactions.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        });
+
+        printTransactionFees(proposeDeletePendingTransactions.transactions);
+
     });
 
     it('Should Approve Transaction: Delete Pending Transactions', async () => {
 
+        // Wallet0 approves Delete Pending Transactions
+
+        const wallet0ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            3, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesDeletePendingTransactions.transactions);
+
+        // Wallet2 approves Delete Pending Transactions
+
+        const wallet2ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            3, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
     });
 
 });
