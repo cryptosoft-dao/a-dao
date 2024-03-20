@@ -59,21 +59,21 @@ Wallet 1 approves Proposal 0 with 20 points | Tansaction 0: 30/50 points
 
 Approves dictionaries state:
 
-Wallet 0 — 0:-\
-Wallet 1 — 0:-
+Wallet 0 — 0:{}\
+Wallet 1 — 0:{}
 
 Wallet 0 transfers 3 points to Wallet 1 | Wallet 0: 7 points | Wallet 1: 23 points
 
 Approves dictionaries state:
 
-Wallet 0 — 0:-\
-Wallet 1 — 0:-
+Wallet 0 — 0:{}\
+Wallet 1 — 0:{}
 
 Wallet 0 can revoke his approve from Transaction 0
 
 Approves dictionaries state:
 
-Wallet 1 — 0:-
+Wallet 1 — 0:{}
 
 Success!
 
@@ -84,8 +84,8 @@ Wallet 0 transfers 3 points to Wallet 3 | Wallet 0: 7 points | Wallet 3: 3 point
 
 Approves dictionaries state:
 
-Wallet 1 — 0:-\
-Wallet 3 — 0:-
+Wallet 1 — 0:{}\
+Wallet 3 — 0:{}
 
 Proposal 0 approval is added to Wallet 3 approvals dictionary\
 Wallet 3 can revoke his approve if he does not agree with previous approval points holder
@@ -100,9 +100,9 @@ Wallet 2 approves Proposal 0 | Tansaction 0: 60/50 points (Approved)
 
 Approves dictionaries state:
 
-Wallet 0 — 0:-\
-Wallet 1 — 0:-\
-Wallet 2 - 0:-
+Wallet 0 — 0:{}\
+Wallet 1 — 0:{}\
+Wallet 2 — 0:{}
 
 Proposal 1 initiated
 Wallet 0 approves Proposal 0 | Tansaction 0: 10/50 points\
@@ -110,21 +110,21 @@ Wallet 0 transfers 3 points to Wallet 1 | Wallet 0: 7 points | Wallet 1: 23 poin
 
 Approves dictionaries state:
 
-Wallet 0 — 0:-, 1:_\
-Wallet 1 — 0:-, 1:3
+Wallet 0 — 0:{}, 1:{}\
+Wallet 1 — 0:{}, 1:3
 
 Just 3 points for Proposal 1 are added to Wallet 1 approvals dictionary\
-Wallet 1 revokes new-added approval
+Wallet 1 revokes new{}added approval
 
 
 Approves dictionaries state:
 
-Wallet 0 — 0:-, 1:-\
-Wallet 1 — 0:-
+Wallet 0 — 0:{}, 1:{}\
+Wallet 1 — 0:{}
 
 Wallet 1 adds his approval to Proposal 1 (now all his points will be counted)
 
-Wallet 0 — 0:-, 1:-\
-Wallet 1 — 0:-, 1:-
+Wallet 0 — 0:{}, 1:{}\
+Wallet 1 — 0:{}, 1:{}
 
 Success!
