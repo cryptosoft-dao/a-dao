@@ -49,23 +49,24 @@ const int tt::delete_pending_transactions = 10;
         ;; Key: uint32
         ;; value (cell)
             ;; slice profitable_address
-    global cell profitable_addresses;
+    global cell profitable_addresses; ;; 1 ref
     ;; udict pending_invitations
         ;; Key: uint32
         ;; value (cell)
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
-    global cell pending_invitations; ;; on activation
+    global cell pending_invitations; ;; 1 ref
     ;; udict pending_transactions
-        ;; Key: uint32
+        ;; Key: uint32 (or sha256 address hash?)
         ;; value (cell)
             ;; int4 transaction_type
             ;; int32 deadline
             ;; cell transaction_info
             ;; dict approvals
             ;; int32 approval_points_recieved
-    global cell pending_transactions;
+    global int next_transaction_index; ;; int64
+    global cell pending_transactions; ;; 1 ref
     ;; udict authorized_addresses
         ;; Key: uint32
         ;; value (slice)
@@ -74,10 +75,10 @@ const int tt::delete_pending_transactions = 10;
             ;; int32 profit_points
             ;; dict approved_invitations
             ;; dict approved_transactions
-    global cell authorized_addresses;
+    global cell authorized_addresses; ;; 1 ref
     global int total_approval_points; ;; uint32
-    global int total_profit_points; ;;uint32
-    global int total_profit_reserved;
+    global int total_profit_points; ;; uint32
+    global int total_profit_reserved; ;; uint32
 
 ;; Storage functions
 
@@ -95,6 +96,7 @@ const int tt::delete_pending_transactions = 10;
             .store_uint(profit_reserve_percent_denominator, 32)
             .store_dict(profitable_addresses)
             .store_dict(pending_invitations)
+            .store_uint(next_transaction_index, 32)
             .store_dict(pending_transactions)
             .store_dict(authorized_addresses)
             .store_uint(total_approval_points, 32)
@@ -120,6 +122,7 @@ const int tt::delete_pending_transactions = 10;
         profit_reserve_percent_denominator = 0;
         profitable_addresses = new_dict();
         pending_invitations = new_dict();
+        next_transaction_index = 0;
         pending_transactions = new_dict();
         authorized_addresses = new_dict();
         total_approval_points = 0;
@@ -134,6 +137,7 @@ const int tt::delete_pending_transactions = 10;
         profit_reserve_percent_denominator = ds~load_uint(32);
         profitable_addresses = ds~load_dict();
         pending_invitations = ds~load_dict();
+        next_transaction_index = ds~load_uint(32);
         pending_transactions = ds~load_dict();
         authorized_addresses = ds~load_dict();
         total_approval_points = ds~load_uint(32);
@@ -456,6 +460,11 @@ const int tt::delete_pending_transactions = 10;
                 } else {
                     ~strdump("recipient address is not present in authorized_addresses"); ;; add from accept invitations
 
+                    ;; Parse current sender approvals information and delete current state
+                    ;; Add approvals to the new address
+                    ;; Create new approvals for sender
+                    ;; Save new approvals to recipient
+
                     ~strdump("Create sender_approved_transactions ");
 
                 }
@@ -542,11 +551,6 @@ const int tt::delete_pending_transactions = 10;
         int transaction_type = in_msg_body.preload_uint(32);
         int deadline = in_msg_body.preload_uint(32);
         cell transaction_info = in_msg_body.preload_ref();
-        ~strdump("Get max pending_transactions index");
-        (int max_transaction_index, _, int success?) = pending_transactions.udict_get_max?(32);
-        if (~ success?) {
-            max_transaction_index = -1;
-        }
         ~strdump("Convert transaction_info to slice");
         slice transaction_info_cs = transaction_info.begin_parse();
         ~strdump("Set zero approvals");
@@ -558,10 +562,9 @@ const int tt::delete_pending_transactions = 10;
             int approval_points = transaction_info_cs~load_uint(32);
             int profit_points = transaction_info_cs~load_uint(32);
             ~strdump("Add transaction to pending_transactions");
-            max_transaction_index~dump();
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -578,6 +581,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -588,7 +592,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -597,6 +601,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -607,7 +612,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -616,6 +621,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -626,7 +632,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -635,6 +641,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -649,7 +656,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -658,6 +665,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return(); 
@@ -669,7 +677,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -678,6 +686,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -695,7 +704,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -711,6 +720,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -724,7 +734,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -733,6 +743,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();
@@ -743,7 +754,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
-                max_transaction_index + 1, 
+                next_transaction_index, 
                 begin_cell()
                     .store_uint(transaction_type, 32)
                     .store_uint(deadline, 32)
@@ -752,6 +763,7 @@ const int tt::delete_pending_transactions = 10;
                     .store_uint(approval_points_recieved, 32)
                 .end_cell()
             );
+            next_transaction_index = next_transaction_index + 1;
             save_data();
             just_notify_master(op, transaction_type);
             return();

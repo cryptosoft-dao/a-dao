@@ -245,6 +245,8 @@ describe('ADaoMaster', () => {
 
     });
 
+    it('Empty test', async () => {});
+
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
 
         const wallet2ChangesAddressToWallet2 = await firstADao.sendChangeMyAddress(wallet2.getSender(), toNano('0.33'), 
@@ -458,7 +460,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Withdraw Profit
 
         const wallet0ApprovesWithdrawProfit = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            2, // TransactionIndex
         )
 
         expect(wallet0ApprovesWithdrawProfit.transactions).toHaveTransaction({
@@ -473,7 +475,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Withdraw Profit
 
         const wallet2ApprovesWithdrawProfit = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            2, // TransactionIndex
         )
 
         expect(wallet2ApprovesWithdrawProfit.transactions).toHaveTransaction({
@@ -529,7 +531,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves TON Distribution
 
         const wallet0ApprovesTonDistribution = await firstADao.sendApprove(wallet0.getSender(), toNano('1'), 
-            0, // TransactionIndex
+            3, // TransactionIndex
         )
 
         expect(wallet0ApprovesTonDistribution.transactions).toHaveTransaction({
@@ -544,7 +546,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Withdraw Profit
 
         const wallet2ApprovesTonDistribution = await firstADao.sendApprove(wallet2.getSender(), toNano('3'), 
-            0, // TransactionIndex
+            3, // TransactionIndex
         )
 
         expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
@@ -595,7 +597,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Arbitrary Transaction
 
         const wallet0ApprovesArbitraryTransaction = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            4, // TransactionIndex
         )
 
         expect(wallet0ApprovesArbitraryTransaction.transactions).toHaveTransaction({
@@ -610,7 +612,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Arbitrary Transaction
 
         const wallet2ApprovesArbitraryTransaction = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            4, // TransactionIndex
         )
 
         expect(wallet2ApprovesArbitraryTransaction.transactions).toHaveTransaction({
@@ -655,7 +657,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Update Agreement Percent
 
         const wallet0ApprovesUpdateAgreementPercent = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            5, // TransactionIndex
         )
 
         expect(wallet0ApprovesUpdateAgreementPercent.transactions).toHaveTransaction({
@@ -670,7 +672,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Update Agreement Percent
 
         const wallet2ApprovesUpdateAgreementPercent = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            5, // TransactionIndex
         )
 
         expect(wallet2ApprovesUpdateAgreementPercent.transactions).toHaveTransaction({
@@ -712,7 +714,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Transfer Points
 
         const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            6, // TransactionIndex
         )
 
         expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -727,7 +729,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Transfer Points
 
         const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            6, // TransactionIndex
         )
 
         expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -766,7 +768,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Transfer Points
 
         const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            7, // TransactionIndex
         )
 
         expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -781,7 +783,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Transfer Points
 
         const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            7, // TransactionIndex
         )
 
         expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -818,7 +820,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves wallet4 invitation
 
         const wallet0ApprovesTransferPoints = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            8, // TransactionIndex
         )
 
         expect(wallet0ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -833,7 +835,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves wallet4 invitation
 
         const wallet2ApprovesTransferPoints = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            8, // TransactionIndex
         )
 
         expect(wallet2ApprovesTransferPoints.transactions).toHaveTransaction({
@@ -866,7 +868,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves wallet5 invitation
 
         const wallet0ApprovesWallet5Invitation = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            9, // TransactionIndex
         )
 
         expect(wallet0ApprovesWallet5Invitation.transactions).toHaveTransaction({
@@ -881,7 +883,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves wallet5 invitation
 
         const wallet2ApprovesWallet5Invitation = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            9, // TransactionIndex
         )
 
         expect(wallet2ApprovesWallet5Invitation.transactions).toHaveTransaction({
@@ -914,7 +916,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves wallet6 invitation
 
         const wallet0ApprovesWallet6Invitation = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            10, // TransactionIndex
         )
 
         expect(wallet0ApprovesWallet6Invitation.transactions).toHaveTransaction({
@@ -929,7 +931,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves wallet6 invitation
 
         const wallet2ApprovesWallet6Invitation = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            10, // TransactionIndex
         )
 
         expect(wallet2ApprovesWallet6Invitation.transactions).toHaveTransaction({
@@ -968,7 +970,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Delete Pending Invitations
 
         const wallet0ApprovesDeletePendingInvitations = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            11, // TransactionIndex
         )
 
         expect(wallet0ApprovesDeletePendingInvitations.transactions).toHaveTransaction({
@@ -983,7 +985,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Delete Pending Invitations
 
         const wallet2ApprovesDeletePendingInvitations = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            0, // TransactionIndex
+            11, // TransactionIndex
         )
 
         expect(wallet2ApprovesDeletePendingInvitations.transactions).toHaveTransaction({
@@ -1074,7 +1076,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Delete Pending Transactions
 
         const wallet0ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            3, // TransactionIndex
+            12, // TransactionIndex
         )
 
         expect(wallet0ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
@@ -1089,7 +1091,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Delete Pending Transactions
 
         const wallet2ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            3, // TransactionIndex
+            12, // TransactionIndex
         )
 
         expect(wallet2ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
