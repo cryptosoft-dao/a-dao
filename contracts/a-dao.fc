@@ -68,12 +68,11 @@ const int tt::delete_pending_transactions = 10;
     global int next_transaction_index; ;; int64
     global cell pending_transactions; ;; 1 ref
     ;; udict authorized_addresses
-        ;; Key: uint32
+        ;; Key: uint256 
         ;; value (slice)
             ;; slice address
             ;; int32 approval_points
             ;; int32 profit_points
-            ;; dict approved_invitations
             ;; dict approved_transactions
     global cell authorized_addresses; ;; 1 ref
     global int total_approval_points; ;; uint32
@@ -236,7 +235,7 @@ const int tt::delete_pending_transactions = 10;
         int approval_points_recieved = transaction_cs~load_uint(32); ;; approval_points_recieved
         ~strdump("Add approve to approvals dictionary");
         int sender_address_sha256 = slice_hash(sender_address);
-        (approvals, int success?) = approvals.udict_add?(256, sender_address_sha256, transaction_cs);
+        (approvals, int success?) = approvals.udict_add?(256, sender_address_sha256, begin_cell().end_cell().begin_parse());
         ~strdump("Throw if double approval");
         throw_unless(666, success?);
         ~strdump("Count approvals");
@@ -341,7 +340,6 @@ const int tt::delete_pending_transactions = 10;
                         .end_cell();
                     send_raw_message(msg, 0);
                     (key, authorized_address_info_cs, success?) = authorized_addresses.udict_get_next?(256, key);
-
                 }
                 save_data();
                 just_notify_master(op, transaction_type);
@@ -383,15 +381,52 @@ const int tt::delete_pending_transactions = 10;
                 int profit_points_in_transfer = transaction_info_cs~load_uint(32);
                 ~strdump("Get sender points info");
                 int points_sender_sha256 = slice_hash(points_sender);
+                ~strdump("1");
                 (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
+                ~strdump("1");
                 throw_unless(666, success?);
+                ~strdump("1");
+                slice points_sender_address = points_sender_info_cs~load_msg_addr();
+                ~strdump("1");
                 int sender_approval_points = points_sender_info_cs~load_uint(32);
+                sender_approval_points~dump();
+                ~strdump("1");
                 int sender_profit_points = points_sender_info_cs~load_uint(32);
+                sender_profit_points~dump();
+                ~strdump("1");
                 cell sender_approved_transactions = points_sender_info_cs~load_dict();
                 ~strdump("Check recipient in authorized_addresses");
                 int points_recipient_sha256 = slice_hash(points_recipient);
+                ~strdump("1");
                 (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
-                ;; Update sender approves
+                ~strdump("1");
+                success?~dump();
+                if (success?) {
+                    ~strdump("Parse recipient info");
+                    int recipient_approval_points = points_recipient_info_cs~load_uint(32);
+                    int recipient_profit_points = points_recipient_info_cs~load_uint(32);
+                    cell recipient_approved_transactions = points_recipient_info_cs~load_dict();
+                    ~strdump("Update recipient info");
+                    recipient_approval_points = recipient_approval_points + approval_points_in_transfer;
+                    recipient_profit_points = recipient_profit_points + profit_points_in_transfer;
+                    (int key, slice sender_approved_transaction, int flag) = sender_approved_transactions.udict_get_min?(32);
+                    while (flag) {
+                        recipient_approved_transactions~udict_add?(32, key, sender_approved_transaction);
+                        (key, sender_approved_transaction, flag) = sender_approved_transactions.udict_get_next?(32, key);
+                    }
+                } else {
+                    ~strdump("Add recipient to authorized_addresses");
+                    sender_approval_points~dump();
+                    sender_profit_points~dump();
+                    points_recipient_info_cs = 
+                        begin_cell()
+                            .store_uint(32, sender_approval_points)
+                            .store_uint(32, sender_profit_points)
+                            .store_dict(sender_approved_transactions)
+                        .end_cell().begin_parse();
+                    authorized_addresses~udict_set(256, points_recipient_sha256, points_recipient_info_cs);
+                }
+                ~strdump("Update sender approves");
                 (int key, slice value, int flag) = sender_approved_transactions.udict_get_min?(32);
                 while (flag) {
                     (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
@@ -406,8 +441,12 @@ const int tt::delete_pending_transactions = 10;
                     ~strdump("Delete old transaction state from pending_transactions");
                     (pending_transactions, int success?) = pending_transactions.udict_delete?(32, transaction_index);
                     throw_unless(666, success?);
-                    ~strdump("Update approvals");
-                    
+                    ~strdump("Delete sender from approvals dict");
+                    int points_sender_address_sha256 = slice_hash(points_sender);
+                    (approvals, int flag) = approvals.udict_delete?(256, points_sender_address_sha256);
+                    ~strdump("Add recipient to approvals dict");
+                    int points_recipient_address_sha256 = slice_hash(points_recipient);
+                    (approvals, int success?) = approvals.udict_add?(256, points_recipient_address_sha256, begin_cell().end_cell().begin_parse());
                     ~strdump("Count new approval point recieved");
                     approval_points_recieved = approval_points_recieved - approval_points_in_transfer;
                     ~strdump("Save new transaction state");
@@ -419,134 +458,14 @@ const int tt::delete_pending_transactions = 10;
                         .store_uint(approval_points_recieved, 32)
                     .end_cell();
                     pending_transactions~udict_set_ref(32, transaction_index, new_transaction_state);
-
-                    (int key, slice value, int flag) = sender_approved_transactions.udict_get_next?(32);
+                    (int key, slice value, int flag) = sender_approved_transactions.udict_get_next?(32, key);
                 }
-                pending_transactions~udict_get?(32, key)
-                if (success?) {
-                    
-                } else {
-
+                if ((sender_approval_points - approval_points_in_transfer == 0) & (sender_profit_points - profit_points_in_transfer == 0)) {
+                    ~strdump("Delete sender from authorized_addresses if all points transfered");
+                    int sender_address_sha256 = slice_hash(sender_address);
+                    (authorized_addresses, int success?) = authorized_addresses.udict_delete?(256, sender_address_sha256);
+                    throw_unless(666, success?);
                 }
-                if (sender_approval_points - approval_points_in_transfer == 0) {
-                    ;; Delete sender from authorized_addresses
-                }
-            }
-            if (transaction_type == tt::transfer_points) {
-                ~strdump("Start Transaction Approval: Transfer Points");
-                ~strdump("Parse transaction info");
-                slice points_sender = transaction_info_cs~load_msg_addr();
-                slice points_recipient = transaction_info_cs~load_msg_addr();
-                int approval_points_in_transfer = transaction_info_cs~load_uint(32);
-                int profit_points_in_transfer = transaction_info_cs~load_uint(32);
-                ~strdump("Get points sender info");
-                int points_sender_sha256 = slice_hash(points_sender);
-                (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
-                throw_unless(666, success?);
-                int sender_approval_points = points_sender_info_cs~load_uint(32);
-                int sender_profit_points = points_sender_info_cs~load_uint(32);
-                cell sender_approved_invitations = points_sender_info_cs~load_dict();
-                cell sender_approved_transactions = points_sender_info_cs~load_dict();
-                ~strdump("Check recipient in authorized_addresses");
-                int points_recipient_sha256 = slice_hash(points_recipient);
-                (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
-                if (success?) {
-                    ~strdump("recipient address present in authorized_addresses");
-                    int old_recipient_approval_points = points_recipient_info_cs~load_uint(32);
-                    int old_recipient_profit_points = points_recipient_info_cs~load_uint(32);
-                    cell old_recipient_approved_invitations = points_recipient_info_cs~load_dict();
-                    cell old_recipient_approved_transactions = points_recipient_info_cs~load_dict();
-                    ~strdump("Count new recipient approval & profit points");
-                    int recipient_approval_points = old_recipient_approval_points + approval_points_in_transfer;
-                    int recipient_profit_points = old_recipient_profit_points + profit_points_in_transfer;
-                    ~strdump("Start recipient & sender invitations approvals harmonization");
-                    (int approved_address_sha256, slice sender_approved_invitation_cs, int success?) = sender_approved_invitations.udict_get_min?(32);
-                    cell new_recipient_approved_invitations = new_dict();
-                    cell new_sender_approved_invitations = new_dict();
-                    while (success?) {
-                        (slice recipient_approved_invitation_cs, int success?) = old_recipient_approved_invitations.udict_get?(32, approved_address_sha256);
-                        if (success?) {
-                            ~strdump("Update new_recipient_approved_invitations");
-                            int old_recipient_points_on_invitation = recipient_approved_invitation_cs~load_uint(32);
-                            int recipient_points_on_invitation = old_recipient_points_on_invitation + approval_points_in_transfer;
-                            new_recipient_approved_invitations~udict_set(32, approved_address_sha256,
-                                begin_cell()
-                                    .store_uint(recipient_points_on_invitation, 32)
-                                .end_cell().begin_parse()
-                            );
-                            ~strdump("Update new_sender_approved_invitations");
-                            int old_sender_points_on_invitation = sender_approved_invitation_cs~load_uint(32);
-                            int sender_points_on_invitation = old_sender_points_on_invitation - approval_points_in_transfer;
-                            new_sender_approved_invitations~udict_set(32, approved_address_sha256,
-                                begin_cell()
-                                    .store_uint(sender_points_on_invitation, 32)
-                                .end_cell().begin_parse()
-                            );
-                        } else {
-                            new_recipient_approved_invitations~udict_set(32, approved_address_sha256, recipient_approved_invitation_cs);
-                        }
-                        (int approved_address_sha256, slice sender_approved_invitation_cs, int success?) = sender_approved_invitations.udict_get_next?(256, approved_address_sha256);
-                    }
-                    ~strdump("Start recipient & sender transactions approvals harmonization");
-                    cell new_recipient_approved_transactions = new_dict();
-                    cell new_sender_approved_transactions = new_dict();
-                    (int approved_address_sha256, slice sender_approved_invitation_cs, int success?) = sender_approved_transactions.udict_get_min?(32);
-                    while (success?) {
-                        (slice recipient_approved_invitation_cs, int success?) = old_recipient_approved_transactions.udict_get?(32, approved_address_sha256);
-                        if (success?) {
-                            ~strdump("Update new_recipient_approved_transactions");
-                            int old_recipient_points_on_invitation = recipient_approved_invitation_cs~load_uint(32);
-                            int recipient_points_on_invitation = old_recipient_points_on_invitation + approval_points_in_transfer;
-                            new_recipient_approved_transactions~udict_set(32, approved_address_sha256,
-                                begin_cell()
-                                    .store_uint(recipient_points_on_invitation, 32)
-                                .end_cell().begin_parse()
-                            );
-                            ~strdump("Update new_sender_approved_transactions");
-                            int old_sender_points_on_invitation = sender_approved_invitation_cs~load_uint(32);
-                            int sender_points_on_invitation = old_sender_points_on_invitation - approval_points_in_transfer;
-                            new_sender_approved_transactions~udict_set(32, approved_address_sha256,
-                                begin_cell()
-                                    .store_uint(sender_points_on_invitation, 32)
-                                .end_cell().begin_parse()
-                            );
-                        } else {
-                            new_recipient_approved_transactions~udict_set(32, approved_address_sha256, recipient_approved_invitation_cs);
-                        }
-                        (int approved_address_sha256, slice sender_approved_invitation_cs, int success?) = sender_approved_transactions.udict_get_next?(256, approved_address_sha256);
-                    }
-                } else {
-                    ~strdump("recipient address is not present in authorized_addresses"); ;; add from accept invitations
-
-                    ;; Parse current sender approvals information and delete current state
-                    ;; Add approvals to the new address
-                    ;; Create new approvals for sender
-                    ;; Save new approvals to recipient
-
-                    ~strdump("Create sender_approved_transactions ");
-
-                }
-                ~strdump("Count new approval & profit points");
-                int new_sender_approval_points = sender_approval_points - approval_points_in_transfer;
-                int new_sender_profit_points = sender_profit_points - profit_points_in_transfer;
-                ~strdump("Delete current points sender state from authorized_addresses");
-                int points_sender_sha256 = slice_hash(points_sender);
-                (cell authorized_addresses, int success?) = authorized_addresses.udict_delete?(256, points_sender_sha256);
-                throw_unless(666, success?);
-                ~strdump("Add current points sender state");
-                if ((new_sender_approval_points != 0) & (new_sender_profit_points != 0)) {
-                    authorized_addresses~udict_set(256, slice_hash(points_sender), 
-                        begin_cell()
-                            .store_slice(points_sender)
-                            .store_uint(new_sender_approval_points, 32)
-                            .store_uint(new_sender_profit_points, 32)
-                        .end_cell().begin_parse()
-                    );
-                }
-                (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, slice_hash(points_recipient));
-                ;; Transfer active approvals & devide approval_points
-                ;; (slice authorized_address_info_cs, success?)
-                ~strdump("Delete address from authorized_addresses if all points transfered");
                 save_data();
                 just_notify_master(op, transaction_type);
                 return();
@@ -631,7 +550,6 @@ const int tt::delete_pending_transactions = 10;
                             .store_slice(address_to_invite)
                             .store_uint(approval_points, 32)
                             .store_uint(profit_points, 32)
-                            .store_dict(new_dict()) ;; dict active_invitations_approvals
                             .store_dict(new_dict()) ;; dict active_transaction_approvals
                         .end_cell()
                     )
@@ -893,7 +811,10 @@ const int tt::delete_pending_transactions = 10;
         if (success? & equal_slices(sender_address, authorized_address)) {
             ~strdump("Sender authorized");
             int approval_points = authorized_address_info_cs~load_uint(32);
+            approval_points~dump();
             int profit_points = authorized_address_info_cs~load_uint(32);
+            approval_points~dump();
+            cell active_transaction_approvals = authorized_address_info_cs~load_dict();
             ~strdump("End authorized_address adding");
             int sender_address_sha256 = slice_hash(sender_address);
             authorized_addresses~udict_set(256, sender_address_sha256, authorized_address_info.begin_parse());

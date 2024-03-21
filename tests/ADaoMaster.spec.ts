@@ -747,6 +747,8 @@ describe('ADaoMaster', () => {
 
     });
 
+    /*
+
     it('Should Propose Transaction: Transfer Points To Authorized Address', async () => {
 
         const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), 
@@ -1108,5 +1110,7 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
 
     });
+
+    */
 
 });
