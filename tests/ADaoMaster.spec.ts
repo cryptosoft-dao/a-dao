@@ -109,8 +109,6 @@ describe('ADaoMaster', () => {
                 .storeAddress(wallet0.address)
                 .storeUint(28 ,32)
                 .storeUint(37, 32)
-                .storeDict(Dictionary.empty()) // active_invitations_approves
-                .storeDict(Dictionary.empty()) // active_transactions_approves
             .endCell()
         );
         PendingInvitationsDict.set(
@@ -119,8 +117,6 @@ describe('ADaoMaster', () => {
                 .storeAddress(wallet1.address)
                 .storeUint(35 ,32)
                 .storeUint(28, 32)
-                .storeDict(Dictionary.empty())
-                .storeDict(Dictionary.empty())
             .endCell());
         PendingInvitationsDict.set(BigInt(2), beginCell().storeAddress(wallet2.address).storeUint(37 ,32).storeUint(35, 32).storeDict(Dictionary.empty()).endCell());
         const PendingInvitations = beginCell().storeDictDirect(PendingInvitationsDict, Dictionary.Keys.BigUint(32), Dictionary.Values.Cell()).endCell();
@@ -747,8 +743,6 @@ describe('ADaoMaster', () => {
 
     });
 
-    /*
-
     it('Should Propose Transaction: Transfer Points To Authorized Address', async () => {
 
         const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), 
@@ -1110,7 +1104,5 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
 
     });
-
-    */
 
 });
