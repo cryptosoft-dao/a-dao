@@ -16,6 +16,7 @@ const int op::invite_to_a_dao = 8;
 const int op::revoke_approval = 9;
 const int op::change_my_address = 10;
 const int op::quit_a_dao = 11;
+const int op::transfer_bought_points = 12;
 
 ;; Transaction Types
 
@@ -388,31 +389,15 @@ const int tt::delete_pending_transactions = 10;
                 int profit_points_in_transfer = transaction_info_cs~load_uint(32);
                 ~strdump("Get sender points info");
                 int points_sender_sha256 = slice_hash(points_sender);
-                ~strdump("1");
                 (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
-                points_sender_info_cs~dump();
-                ~strdump("2");
                 throw_unless(666, success?);
-                ~strdump("3");
-                points_sender_info_cs~dump();
                 slice points_sender_address = points_sender_info_cs~load_msg_addr();
-                ~strdump("4");
                 int sender_approval_points = points_sender_info_cs~load_uint(32);
-                points_sender_info_cs~dump();
-                sender_approval_points~dump();
-                ~strdump("5");
                 int sender_profit_points = points_sender_info_cs~load_uint(32);
-                points_sender_info_cs~dump();
-                sender_profit_points~dump();
-                ~strdump("6");
-                points_sender_info_cs~dump();
                 cell sender_approved_transactions = points_sender_info_cs~load_dict();
                 ~strdump("Check recipient in authorized_addresses");
                 int points_recipient_sha256 = slice_hash(points_recipient);
-                ~strdump("7");
                 (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
-                ~strdump("8");
-                success?~dump();
                 if (success?) {
                     ~strdump("Parse recipient info");
                     int recipient_approval_points = points_recipient_info_cs~load_uint(32);
@@ -484,6 +469,7 @@ const int tt::delete_pending_transactions = 10;
             }
             if (transaction_type == tt::put_up_points_for_sale) {
 
+                ~strdump("Start Transaction Approval: Delete Pending Invitations");
             }
             if (transaction_type == tt::delete_pending_invitations) {
                 ~strdump("Start Transaction Approval: Delete Pending Invitations");
@@ -716,7 +702,38 @@ const int tt::delete_pending_transactions = 10;
             return();
         }
         if (transaction_type == tt::put_up_points_for_sale) {
-
+            ~strdump("Start Transaction Proposal: Put Up Points For Sale");
+            slice points_buyer = transaction_info_cs~load_msg_addr();
+            int approval_points_for_sale = transaction_info_cs~load_uint(32);
+            int profit_points_for_sale = transaction_info_cs~load_uint(32);
+            ~strdump("Check points availability");
+            int approval_points = authorized_address_info_cs~load_uint(32);
+            int profit_points = authorized_address_info_cs~load_uint(32);
+            throw_if(666, approval_points_for_sale > approval_points);
+            throw_if(777, profit_points_for_sale > profit_points);
+            ~strdump("Add transaction to pending_transactions");
+            pending_transactions~udict_set_ref(
+                32, 
+                next_transaction_index, 
+                begin_cell()
+                    .store_uint(transaction_type, 32)
+                    .store_uint(deadline, 32)
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(sender_address)
+                            .store_slice(points_buyer)
+                            .store_uint(approval_points_for_sale, 32)
+                            .store_uint(profit_points_for_sale, 32)
+                        .end_cell()
+                    )
+                    .store_dict(approvals)
+                    .store_uint(approval_points_recieved, 32)
+                .end_cell()
+            );
+            next_transaction_index = next_transaction_index + 1;
+            save_data();
+            just_notify_master(op, transaction_type);
+            return();
         }
         if (transaction_type == tt::delete_pending_invitations) {
             ~strdump("Start Transaction Proposal: Delete Pending Invitations");
@@ -854,6 +871,9 @@ const int tt::delete_pending_transactions = 10;
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
+    }
+    if (op == op::transfer_bought_points) {
+
     }
     if (op == op::activate_a_dao) {
         ~strdump("Start A DAO Activation");

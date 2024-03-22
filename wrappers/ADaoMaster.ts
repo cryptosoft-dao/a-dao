@@ -12,6 +12,7 @@ import {
 export type ADaoMasterConfig = {
     OwnerAddress: Address;
     ADaoCode: Cell;
+    PointsSeller: Cell;
     NextADaoCreationFee: number | bigint;
     NextADaoTransactionFee: number | bigint;
 }
@@ -20,6 +21,7 @@ export function serializeADaoMasterConfigToCell(config: ADaoMasterConfig): Cell 
     return beginCell()
         .storeAddress(config.OwnerAddress)
         .storeRef(config.ADaoCode)
+        .storeRef(config.PointsSeller)
         .storeCoins(config.NextADaoCreationFee)
         .storeCoins(config.NextADaoTransactionFee)
     .endCell();

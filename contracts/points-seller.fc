@@ -1,0 +1,8 @@
+;; Imports
+
+#include "stdlib.fc";
+
+;; Operation Codes
+
+const int op::buy = 0;
+const int op::withdraw_from_sale = 1;

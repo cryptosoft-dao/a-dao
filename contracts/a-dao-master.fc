@@ -5,11 +5,13 @@
 const int op::send_deploy_message = 0;
 const int op::withdraw_funds = 1;
 const int op::change_a_dao_master_owner = 2;
+const int op::initiate_points_sale = 3;
 
 ;; Global variables
 
-global slice owner_address;
+global slice owner_address; ;; addr
 global cell a_dao_code; ;; ref
+global cell points_seller; ;; ref
 global int next_a_dao_creation_fee; ;; uint32
 global int next_a_dao_transaction_fee; ;; uint32
 
@@ -26,6 +28,7 @@ const int max_routing_pool_transaction_fee = 1000000000; ;; amount in nanotons
     slice ds = get_data().begin_parse();
     owner_address = ds~load_msg_addr();
     a_dao_code = ds~load_ref();
+    points_seller = ds~load_ref();
     next_a_dao_creation_fee = ds~load_coins();
     next_a_dao_transaction_fee = ds~load_coins();
     ds.end_parse();
@@ -37,6 +40,7 @@ const int max_routing_pool_transaction_fee = 1000000000; ;; amount in nanotons
         begin_cell()
             .store_slice(owner_address)
             .store_ref(a_dao_code)
+            .store_ref(points_seller)
             .store_uint(next_a_dao_creation_fee, 32)
             .store_uint(next_a_dao_transaction_fee, 32)
         .end_cell()
@@ -118,7 +122,9 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
 
     int op = in_msg_body~load_uint(32);
 
+    if (op == op::initiate_points_sale) {
 
+    }
 
 }
 

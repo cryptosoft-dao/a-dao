@@ -2,6 +2,7 @@ import { Blockchain, BlockchainSnapshot, internal, SandboxContract, TreasuryCont
 import { beginCell, Cell, Dictionary, Slice, toNano } from '@ton/core';
 import { ADaoMaster } from '../wrappers/ADaoMaster';
 import { ADao } from '../wrappers/ADao';
+import { PointsSeller } from '../wrappers/PointsSeller';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { ADaoOperationCodes } from '../wrappers/Config';
@@ -28,11 +29,13 @@ describe('ADaoMaster', () => {
 
     let ADaoMasterCode: Cell;
     let ADaoCode: Cell;
+    let PointsSellerCode: Cell;
 
     beforeAll(async () => {
 
         ADaoMasterCode = await compile('ADaoMaster');
         ADaoCode = await compile('ADao');
+        PointsSellerCode = await compile('ADao');
 
         blockchain = await Blockchain.create();
         blockchain.now = blockchainStartTime;
@@ -54,6 +57,7 @@ describe('ADaoMaster', () => {
                 {
                     OwnerAddress: deployer.address,
                     ADaoCode: ADaoCode,
+                    PointsSeller: PointsSellerCode,
                     NextADaoCreationFee: toNano('10'),
                     NextADaoTransactionFee: toNano('0'),
                 }, 
