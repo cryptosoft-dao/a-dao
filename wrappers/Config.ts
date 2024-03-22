@@ -18,8 +18,9 @@ export const ADaoOperationCodes = {
     AcceptInvitationToADao: 6,
     BuyPoints: 7,
     InviteToADao: 8,
-    ChangeMyAddress: 9,
-    QuitADao: 10,
+    RevokeApproval: 9,
+    ChangeMyAddress: 10,
+    QuitADao: 11,
 };
 
 export const ADaoTransactionTypes = {

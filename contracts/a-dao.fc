@@ -13,8 +13,9 @@ const int op::collect_profit = 5;
 const int op::accept_invitation_to_a_dao = 6;
 const int op::buy_points = 7;
 const int op::invite_to_a_dao = 8;
-const int op::change_my_address = 9;
-const int op::quit_a_dao = 10;
+const int op::revoke_approval = 9;
+const int op::change_my_address = 10;
+const int op::quit_a_dao = 11;
 
 ;; Transaction Types
 
@@ -744,6 +745,9 @@ const int tt::delete_pending_transactions = 10;
             just_notify_master(op, transaction_type);
             return();
         }
+    }
+    if (op == op::revoke_approval) {
+
     }
     if (op == op::collect_profit) {
         ~strdump("Start profit collecting");
