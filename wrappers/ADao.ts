@@ -12,7 +12,7 @@ import {
     SendMode, 
     toNano 
 } from '@ton/core';
-import { ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
+import { ADaoInternalOperations, ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
 import { Slice } from '@ton/core';
 
 
@@ -175,7 +175,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProfit(
+    async sendFundsToCollect(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -185,7 +185,7 @@ export class ADao implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body:
                 beginCell()
-                    .storeUint(ADaoOperationCodes.CollectProfit, 32)
+                    .storeUint(ADaoInternalOperations.CollectFunds, 32)
                 .endCell()
         });
     }
@@ -246,7 +246,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProposeWithdrawProfit(
+    async sendProposeSendCollectFunds(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -259,7 +259,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.WithdrawProfit, 32)
+                    .storeUint(ADaoTransactionTypes.SendCollectFunds, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
@@ -370,6 +370,34 @@ export class ADao implements Contract {
                             .storeAddress(Recipient)
                             .storeUint(ApprovalPoints, 32)
                             .storeUint(ProfitPoints, 32)
+                        .endCell()
+                    )
+                .endCell()
+        });
+    }
+
+    async sendPutUpPointsForSale(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        Deadline: number | bigint,
+        PointsBuyer: Address,
+        ApprovalPointsForSale: number | bigint,
+        ProfitPointsForSale: number | bigint,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(ADaoTransactionTypes.PutUpPointsForSale, 32)
+                    .storeUint(Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeAddress(PointsBuyer)
+                            .storeUint(ApprovalPointsForSale, 32)
+                            .storeUint(ProfitPointsForSale, 32)
                         .endCell()
                     )
                 .endCell()

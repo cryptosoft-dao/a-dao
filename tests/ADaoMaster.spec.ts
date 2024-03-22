@@ -5,7 +5,7 @@ import { ADao } from '../wrappers/ADao';
 import { PointsSeller } from '../wrappers/PointsSeller';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
-import { ADaoOperationCodes } from '../wrappers/Config';
+import { ADaoInternalOperations, ADaoOperationCodes } from '../wrappers/Config';
 import { createSliceValue } from './utils/Helpers';
 
 describe('ADaoMaster', () => {
@@ -89,16 +89,6 @@ describe('ADaoMaster', () => {
 
         const ADaoDataBeforeActivation = await firstADao.getADaoData();
         expect(ADaoDataBeforeActivation.active).toStrictEqual(0);
-
-
-        /*
-
-        blockchain.setVerbosityForAddress(firstADao.address, {
-            blockchainLogs: true,
-            vmLogs: 'vm_logs_full'
-        }) 
-
-        */
 
         // Activate a-dao
 
@@ -441,74 +431,74 @@ describe('ADaoMaster', () => {
 
     });
 
-    it('Should Propose Transaction: Withdraw Profit', async () => {
+    it('Should Propose Transaction: Send Collect Funds', async () => {
 
-        const proposeWithdrawProfit = await firstADao.sendProposeWithdrawProfit(wallet2.getSender(), toNano('0.33'), 
+        const proposeSendCollectFunds = await firstADao.sendProposeSendCollectFunds(wallet2.getSender(), toNano('0.33'), 
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
             0, // ProfitableAddressPasscode
         )
 
-        expect(proposeWithdrawProfit.transactions).toHaveTransaction({
+        expect(proposeSendCollectFunds.transactions).toHaveTransaction({
             from: wallet2.address,
             to: firstADao.address,
             op: ADaoOperationCodes.ProposeTransaction,
             success: true,
         })
 
-        printTransactionFees(proposeWithdrawProfit.transactions);
+        printTransactionFees(proposeSendCollectFunds.transactions);
 
     });
 
-    it('Should Approve Transaction: Withdraw Profit', async () => {
+    it('Should Approve Transaction: Send Collect Funds', async () => {
 
-        // Wallet0 approves Withdraw Profit
+        // Wallet0 approves Send Collect Funds
 
-        const wallet0ApprovesWithdrawProfit = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+        const wallet0ApprovesSendCollectFunds = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
             2, // TransactionIndex
         )
 
-        expect(wallet0ApprovesWithdrawProfit.transactions).toHaveTransaction({
+        expect(wallet0ApprovesSendCollectFunds.transactions).toHaveTransaction({
             from: wallet0.address,
             to: firstADao.address,
             op: ADaoOperationCodes.ApproveTransaction,
             success: true,
         });
 
-        printTransactionFees(wallet0ApprovesWithdrawProfit.transactions);
+        printTransactionFees(wallet0ApprovesSendCollectFunds.transactions);
 
-        // Wallet2 approves Withdraw Profit
+        // Wallet2 approves Send Collect Funds
 
-        const wallet2ApprovesWithdrawProfit = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+        const wallet2ApprovesSendCollectFunds = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
             2, // TransactionIndex
         )
 
-        expect(wallet2ApprovesWithdrawProfit.transactions).toHaveTransaction({
+        expect(wallet2ApprovesSendCollectFunds.transactions).toHaveTransaction({
             from: wallet2.address,
             to: firstADao.address,
             op: ADaoOperationCodes.ApproveTransaction,
             success: true,
         })
 
-        expect(wallet2ApprovesWithdrawProfit.transactions).toHaveTransaction({
+        expect(wallet2ApprovesSendCollectFunds.transactions).toHaveTransaction({
             from: firstADao.address,
             to: profitableAddress.address,
-            op: 48,
+            op: ADaoInternalOperations.CollectFunds,
             success: true,
         })
 
-        printTransactionFees(wallet2ApprovesWithdrawProfit.transactions);
+        printTransactionFees(wallet2ApprovesSendCollectFunds.transactions);
 
-        const collectProfit = await firstADao.sendProfit(profitableAddress.getSender(), toNano(333));
+        const collectFunds = await firstADao.sendFundsToCollect(profitableAddress.getSender(), toNano(333));
 
-        expect(collectProfit.transactions).toHaveTransaction({
+        expect(collectFunds.transactions).toHaveTransaction({
             from: profitableAddress.address,
             to: firstADao.address,
             value: toNano(333),
             success: true,
-            op: ADaoOperationCodes.CollectProfit,
+            op: ADaoInternalOperations.CollectFunds,
         })
 
-        printTransactionFees(collectProfit.transactions);
+        printTransactionFees(collectFunds.transactions);
 
     });
 
@@ -547,7 +537,7 @@ describe('ADaoMaster', () => {
 
         printTransactionFees(wallet0ApprovesTonDistribution.transactions);
 
-        // Wallet2 approves Withdraw Profit
+        // Wallet2 approves Send Collect Funds
 
         const wallet2ApprovesTonDistribution = await firstADao.sendApprove(wallet2.getSender(), toNano('3'), 
             3, // TransactionIndex
@@ -693,7 +683,7 @@ describe('ADaoMaster', () => {
 
     });
 
-    it('Should Propose Transaction: Transfer Points to new address', async () => {
+    it('Should Propose Transaction: Transfer Points from Wallet2 to Wallet5 (unauthorized address)', async () => {
 
         const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), 
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
@@ -713,7 +703,7 @@ describe('ADaoMaster', () => {
 
     });
 
-    it('Should Approve Transaction: Transfer Points to new address', async () => {
+    it('Should Approve Transaction: Transfer Points from Wallet2 to Wallet5 (unauthorized address)', async () => {
 
         // Wallet0 approves Transfer Points
 
@@ -1108,5 +1098,26 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesDeletePendingTransactions.transactions);
 
     });
+
+    it('Should Propose Transaction: Put Up Points For Sale To Authorized Address', async () => {
+
+        const proposeTransferPoints = await firstADao.sendPutUpPointsForSale(wallet2.getSender(), toNano('0.33'), 
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
+            wallet0.address, // PointsBuyer
+            BigInt(10), // ApprovalPointsForSale
+            BigInt(10), // ProfitPointsForSale
+        )
+
+        expect(proposeTransferPoints.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ProposeTransaction,
+            success: true,
+        })
+
+        printTransactionFees(proposeTransferPoints.transactions);
+
+    });
+
 
 });

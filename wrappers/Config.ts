@@ -23,11 +23,15 @@ export const ADaoOperationCodes = {
     QuitADao: 11,
 };
 
+export const ADaoInternalOperations = {
+    CollectFunds: 81,
+};
+
 export const ADaoTransactionTypes = {
     TransactionWithoutType: 0,
     InviteAddress: 1,
     DeleteAddress: 2,
-    WithdrawProfit: 3,
+    SendCollectFunds: 81,
     DistributeTon: 4,
     ArbitraryTransaction: 5,
     UpdateAgreementPercent: 6,
