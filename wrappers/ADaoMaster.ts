@@ -22,6 +22,7 @@ export function serializeADaoMasterConfigToCell(config: ADaoMasterConfig): Cell 
         .storeAddress(config.OwnerAddress)
         .storeRef(config.ADaoCode)
         .storeRef(config.PointsSeller)
+        .storeUint(0, 32)
         .storeCoins(config.NextADaoCreationFee)
         .storeCoins(config.NextADaoTransactionFee)
     .endCell();

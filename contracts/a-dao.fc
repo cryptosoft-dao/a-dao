@@ -208,12 +208,11 @@ const int tt::delete_pending_transactions = 10;
     }
 }
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     if (in_msg_body.slice_empty?()) { return (); }
     slice cs = in_msg_full.begin_parse();
-    int success?s = cs~load_uint(4);
+    int success? = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
-    if (success?s & 1) { return (); }
     int op = in_msg_body~load_uint(32);
     load_data();
     if (op == op::approve_transaction) {
@@ -460,8 +459,9 @@ const int tt::delete_pending_transactions = 10;
                 return();
             }
             if (transaction_type == tt::put_up_points_for_sale) {
-
                 ~strdump("Start Transaction Approval: Delete Pending Invitations");
+
+
             }
             if (transaction_type == tt::delete_pending_invitations) {
                 ~strdump("Start Transaction Approval: Delete Pending Invitations");
@@ -694,9 +694,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Start Transaction Proposal: Put Up Points For Sale");
             slice points_buyer = transaction_info_cs~load_msg_addr();
             int approval_points_for_sale = transaction_info_cs~load_uint(32);
-            approval_points_for_sale~dump();
             int profit_points_for_sale = transaction_info_cs~load_uint(32);
-            profit_points_for_sale~dump();
             ~strdump("Check points availability");
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);

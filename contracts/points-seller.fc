@@ -6,3 +6,88 @@
 
 const int op::buy = 0;
 const int op::withdraw_from_sale = 1;
+
+;; Storage globals
+
+    ;; Initial
+    global int active?; ;; uint1
+    global slice a_dao_master; ;; slice 257bits
+    global int index; ;; uint32
+
+    ;; Active
+    global slice a_dao;
+    global slice seller_address;
+    global slice buyer_address;
+    global int approval_points_for_sale;
+    global int profit_points_for_sale
+
+;; Storage functions
+
+() save_data() impure inline {
+    ~strdump("Start save_data()");
+    set_data(
+        begin_cell()
+            .store_int(active?, 1)
+            .store_slice(a_dao_master) ;; slice 257bits
+            .store_uint(index, 32)
+            .store_slice(a_dao) ;; slice 257bits
+            .store_ref( ;; cell sale_info
+                begin_cell()
+                    .store_slice(seller_address)
+                    .store_slice(buyer_address)
+                    .store_uint(approval_points_for_sale, 32)
+                    .store_uint(profit_points_for_sale, 32)
+                .end_cell()
+            )
+        .end_cell())
+    ~strdump("End save_data()");
+}
+
+() load_data() inline {
+    ~strdump("Start load_data()");
+    slice ds = get_data().begin_parse();
+    active? = ds~load_int(1);
+    a_dao_master = ds~load_slice();
+    index = ds~load_uint(32);
+    if (active?) {
+        a_dao = ds~load_msg_addr(); 
+        cell sale_info_cs = ds~load_ref().begin_parse();
+        seller_address = sale_info_cs~load_msg_addr();
+        a_dao_master = sale_info_cs~load_msg_addr();
+        approval_points_for_sale = sale_info_cs~load_uint(32);
+        profit_points_for_sale = sale_info_cs~load_uint(32);
+    } else {
+        a_dao = begin_cell().end_cell().begin_parse();
+        seller_address = begin_cell().end_cell().begin_parse();
+        a_dao_master = begin_cell().end_cell().begin_parse();
+        approval_points_for_sale = 0;
+        profit_points_for_sale = 0;
+    }
+    ~strdump("End load_data()");
+}
+
+() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+
+    if (in_msg_body.slice_empty?()) {
+
+
+
+        return ();
+        
+    }
+
+}
+
+(slice, slice, int, int) get_sale_info() method_id {
+    load_data();
+    sale_info_cs = sale_info.begin_parse();
+    return (
+        sale_info_cs~load_msg_addr(), ;; slice seller_address
+        sale_info_cs~load_msg_addr(), ;; slice buyer_address
+        sale_info_cs~load_uint(32), ;; int approval_points_for_sale
+        sale_info_cs~load_uint(32) ;; int profit_points_for_sale
+    );
+}

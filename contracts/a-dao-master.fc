@@ -11,7 +11,8 @@ const int op::initiate_points_sale = 3;
 
 global slice owner_address; ;; addr
 global cell a_dao_code; ;; ref
-global cell points_seller; ;; ref
+global cell points_seller_code; ;; ref
+global int points_seller_next_index;
 global int next_a_dao_creation_fee; ;; uint32
 global int next_a_dao_transaction_fee; ;; uint32
 
@@ -24,30 +25,34 @@ const int max_routing_pool_transaction_fee = 1000000000; ;; amount in nanotons
 ;; Storage functions
 
 () load_data() impure inline {
-
+    ~strdump("Start load_data()");
     slice ds = get_data().begin_parse();
     owner_address = ds~load_msg_addr();
     a_dao_code = ds~load_ref();
-    points_seller = ds~load_ref();
+    points_seller_code = ds~load_ref();
+    points_seller_next_index = ds~load_uint(32);
     next_a_dao_creation_fee = ds~load_coins();
     next_a_dao_transaction_fee = ds~load_coins();
     ds.end_parse();
-
+    ~strdump("End load_data()");
 }
 
 () save_data() impure inline {
+    ~strdump("Start save_data()");
     set_data(
         begin_cell()
             .store_slice(owner_address)
             .store_ref(a_dao_code)
-            .store_ref(points_seller)
+            .store_ref(points_seller_code)
+            .store_uint(points_seller_next_index, 32)
             .store_uint(next_a_dao_creation_fee, 32)
             .store_uint(next_a_dao_transaction_fee, 32)
         .end_cell()
     );
+    ~strdump("End save_data()");
 }
 
-;; Functions
+;; A DAO Deploy Functions
 
 cell calculate_a_dao_initial_state(
         slice deployer_address,
@@ -56,7 +61,7 @@ cell calculate_a_dao_initial_state(
   cell a_dao_data = 
     begin_cell()
         .store_int(0, 1) ;; int1 active?
-        .store_slice(my_address()) ;; slice root_address
+        .store_slice(my_address()) ;; slice a_dao_master
         .store_slice(deployer_address)
     .end_cell();
   return (
@@ -79,27 +84,48 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
     .begin_parse();
 }
 
-() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
+;; Points Seller Deploy Functions
 
+cell calculate_point_seller_initial_state(
+        int points_seller_next_index,
+        cell points_seller_code
+    ) {
+  cell points_seller_data = 
+    begin_cell()
+        .store_int(0, 1) ;; int1 active?
+        .store_slice(my_address()) ;; slice a_dao_master
+        .store_uint(points_seller_next_index, 32)
+    .end_cell();
+  return (
+    begin_cell()
+        .store_uint(0, 2)
+        .store_dict(points_seller_code)
+        .store_dict(points_seller_data)
+        .store_uint(0, 1)
+    .end_cell()
+  );
+}
+
+slice calculate_points_seller_address(cell points_seller_initial_state) {
+  return 
+    begin_cell()
+        .store_uint(4, 3)
+        .store_int(0, 8)
+        .store_uint(cell_hash(points_seller_initial_state), 256)
+    .end_cell()
+    .begin_parse();
+}
+
+() main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
-
-    if (flags & 1) {  ;; ignore bounced messages
-        return ();
-    }
-
     load_data();
-
     if (in_msg_body.slice_empty?()) {
-
         throw_unless(666, msg_value > next_a_dao_creation_fee);
-
-        ;; Deploy A DAO
-
+        ~strdump("Start transaction approval");
         cell a_dao_initial_state = calculate_a_dao_initial_state(sender_address, a_dao_code);
         slice a_dao_address = calculate_a_dao_address(a_dao_initial_state);
-
         cell message = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(a_dao_address)
@@ -113,19 +139,13 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
                 .end_cell()
             )
         .end_cell();
-
         send_raw_message(message, 0);
-
         return ();
-        
     }
-
     int op = in_msg_body~load_uint(32);
-
     if (op == op::initiate_points_sale) {
 
     }
-
 }
 
 ;; Custom get-methods
@@ -133,6 +153,11 @@ slice calculate_a_dao_address(cell a_dao_initial_state) {
 (slice) get_a_dao_address_by_deployer_address(slice deployer_address) method_id {
     load_data();
     return calculate_a_dao_address(calculate_a_dao_initial_state(deployer_address, a_dao_code));
+}
+
+(slice) get_points_seller_address_by_index(int index) method_id {
+    load_data();
+    return calculate_points_seller_address(calculate_point_seller_initial_state(points_seller_next_index, points_seller_code));
 }
 
 (int) get_next_a_dao_creation_fee() method_id {
