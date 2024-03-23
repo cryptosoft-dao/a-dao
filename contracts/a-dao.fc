@@ -152,6 +152,8 @@ const int tt::delete_pending_transactions = 10;
     ~strdump("End load_data()");
 }
 
+;; Custom functions
+
 () just_notify_master(int op, int transaction_type) impure inline {
     cell msg = begin_cell()
         .store_uint(0x10, 6)
@@ -460,7 +462,10 @@ const int tt::delete_pending_transactions = 10;
             }
             if (transaction_type == tt::put_up_points_for_sale) {
                 ~strdump("Start Transaction Approval: Delete Pending Invitations");
-
+                slice seller_address = transaction_info_cs~load_msg_addr();
+                slice buyer_address = transaction_info_cs~load_msg_addr();
+                int approval_points_for_sale = transaction_info_cs~load_uint(32);
+                int profit_points_for_sale = transaction_info_cs~load_uint(32);
 
             }
             if (transaction_type == tt::delete_pending_invitations) {

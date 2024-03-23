@@ -6,6 +6,7 @@
 
 const int op::buy = 0;
 const int op::withdraw_from_sale = 1;
+const int op::process_deploy_message = 4;
 
 ;; Storage globals
 
@@ -66,19 +67,45 @@ const int op::withdraw_from_sale = 1;
     ~strdump("End load_data()");
 }
 
+() just_notify_master(int op) impure inline {
+    cell msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(a_dao_master)
+        .store_coins(transaction_fee)
+        .store_uint(1, 107)
+        .store_ref(
+            begin_cell()
+                .store_uint(op, 32)
+            .end_cell()
+        )
+    .end_cell();
+    send_raw_message(msg, 1);
+}
+
 () main(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
-
+    slice sender_address = cs~load_msg_addr();
+    load_data();
     if (in_msg_body.slice_empty?()) {
-
-
+        ~strdump("Start purchase");
+        throw_unless(333, active?)
+        throw_unless(666, equal_slices?(sender_address, a_dao_master));
 
         return ();
-        
     }
-
+    int op = in_msg_body~load_uint(32);
+    if (op == op::process_deploy_message) {
+        ~strdump("Start deploy message processing");
+        throw_unless(666, equal_slices(sender_address, a_dao_master));
+        seller_address = in_msg_body~load_msg_addr();
+        buyer_address = in_msg_body~load_msg_addr();
+        approval_points_for_sale = in_msg_body~load_uint(32);
+        profit_points_for_sale = in_msg_body~load_uint(32);
+        active? = true;
+        just_notify_master(op);
+        return();
+    }
 }
 
 (slice, slice, int, int) get_sale_info() method_id {

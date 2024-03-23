@@ -57,9 +57,9 @@ describe('ADaoMaster', () => {
                 {
                     OwnerAddress: deployer.address,
                     ADaoCode: ADaoCode,
-                    PointsSeller: PointsSellerCode,
                     NextADaoCreationFee: toNano('10'),
                     NextADaoTransactionFee: toNano('0'),
+                    PointsSeller: PointsSellerCode,
                 }, 
                 ADaoMasterCode,
             ),
