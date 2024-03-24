@@ -24,12 +24,6 @@ global cell points_seller_code; ;; ref 2
 global int points_seller_next_index; ;; uint32
 global int points_seller_creation_fee; ;; uint32
 
-;; Fees
-
-const int next_a_dao_creation_fee_discount = 10000; ;; amount in nanotons
-const int next_a_dao_transaction_fee_increase = 1000000; ;; amount in nanotons
-const int max_a_dao_transaction_fee = 1000000000; ;; amount in nanotons
-
 ;; Storage functions
 
 () load_data() impure inline {

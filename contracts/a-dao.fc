@@ -258,8 +258,8 @@ const int fee::start_points_sale = 11000000000;
         ~strdump("Start check if sufficient approvals to start actions");
         if (approval_points_recieved > approvals_for_approval) {
             slice transaction_info_cs = transaction_info.begin_parse();
-            if (op::start_points_sale) {
-                throw_unless(666, balance - total_profit_reserved > fee::start_points_sale)
+            if (transaction_type == tt::put_up_points_for_sale) {
+                throw_unless(666, (my_balance - total_profit_reserved) > fee::start_points_sale);
             }
             if (transaction_type == tt::invite_address) {
                 ~strdump("Start Transaction Approval: Invite Address");
@@ -478,8 +478,8 @@ const int fee::start_points_sale = 11000000000;
                 var msg = 
                     begin_cell()
                         .store_uint(0x18, 6)
-                        .store_slice(recipient)
-                        .store_coins(amount)
+                        .store_slice(a_dao_master)
+                        .store_coins(fee::start_points_sale)
                         .store_uint(1, 107)
                         .store_ref(
                             begin_cell()
@@ -487,8 +487,8 @@ const int fee::start_points_sale = 11000000000;
                                 .store_slice(my_address())
                                 .store_slice(seller_address)
                                 .store_slice(buyer_address)
-                                .store_uint(approval_points_for_sale)
-                                .store_uint(profit_points_for_sale)
+                                .store_uint(approval_points_for_sale, 32)
+                                .store_uint(profit_points_for_sale, 32)
                             .end_cell()
                         )
                     .end_cell();
