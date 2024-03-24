@@ -21,10 +21,13 @@ export const ADaoOperationCodes = {
     RevokeApproval: 9,
     ChangeMyAddress: 10,
     QuitADao: 11,
+    TopUpADaoBalance: 12,
 };
 
 export const ADaoInternalOperations = {
     CollectFunds: 81,
+    StartPointSale: 82,
+    TransferBoughtPoints: 83,
 };
 
 export const ADaoTransactionTypes = {

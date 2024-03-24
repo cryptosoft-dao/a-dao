@@ -1,6 +1,7 @@
 ;; Imports
 
 #include "stdlib.fc";
+#include "errors.fc";
 
 ;; Operation Codes
 
@@ -15,12 +16,13 @@ const int op::invite_to_a_dao = 8;
 const int op::revoke_approval = 9;
 const int op::change_my_address = 10;
 const int op::quit_a_dao = 11;
-const int op::transfer_bought_points = 12;
+const int op::top_up_balance = 12;
 
 ;; Internal Operations
 
 const int op::collect_funds = 81;
 const int op::start_points_sale = 82;
+const int op::transfer_bought_points = 83;
 
 ;; Transaction Types
 
@@ -36,10 +38,6 @@ const int tt::put_up_points_for_sale = 8;
 const int tt::delete_pending_invitations = 9;
 const int tt::delete_pending_transactions = 10;
 
-;; Constants
-
-const int fee::start_points_sale = 11000000000;
-
 ;; Storage globals
 
     ;; Initial
@@ -48,6 +46,7 @@ const int fee::start_points_sale = 11000000000;
     global slice a_dao_master; ;; slice 257bits
     global slice deployer_address; ;; slice 257bits
     global int transaction_fee; ;; uint32
+    global int points_seller_creation_fee;
 
     ;; Active
 
@@ -98,7 +97,8 @@ const int fee::start_points_sale = 11000000000;
             .store_int(active?, 1)
             .store_slice(a_dao_master)
             .store_slice(deployer_address)
-            .store_uint(transaction_fee, 32)
+            .store_coins(transaction_fee)
+            .store_coins(points_seller_creation_fee)
             .store_uint(agreement_percent_numerator, 32)
             .store_uint(agreement_percent_denominator, 32)
             .store_uint(profit_reserve_percent_numerator, 32)
@@ -120,11 +120,15 @@ const int fee::start_points_sale = 11000000000;
     ~strdump("Start load_data()");
     slice ds = get_data().begin_parse();
     active? = ds~load_int(1);
+    active?~dump();
     a_dao_master = ds~load_msg_addr();
+    a_dao_master~dump();
     deployer_address = ds~load_msg_addr();
+    deployer_address~dump();
     if (active? == false) {
         ~strdump("active? == false");
         transaction_fee = 0;
+        points_seller_creation_fee = 0;
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
         profit_reserve_percent_numerator = 0; 
@@ -139,19 +143,34 @@ const int fee::start_points_sale = 11000000000;
         total_profit_reserved = 0;
     } else {
         ~strdump("active? == true");
-        transaction_fee = ds~load_uint(32);
+        transaction_fee = ds~load_coins();
+        transaction_fee~dump();
+        points_seller_creation_fee = ds~load_coins();
+        points_seller_creation_fee~dump();
         agreement_percent_numerator = ds~load_uint(32);
+        agreement_percent_numerator~dump();
         agreement_percent_denominator = ds~load_uint(32);
-        profit_reserve_percent_numerator = ds~load_uint(32); 
+        agreement_percent_denominator~dump();
+        profit_reserve_percent_numerator = ds~load_uint(32);
+        profit_reserve_percent_numerator~dump();
         profit_reserve_percent_denominator = ds~load_uint(32);
+        profit_reserve_percent_denominator~dump();
         profitable_addresses = ds~load_dict();
+        profitable_addresses~dump();
         pending_invitations = ds~load_dict();
+        pending_invitations~dump();
         next_transaction_index = ds~load_uint(32);
+        next_transaction_index~dump();
         pending_transactions = ds~load_dict();
+        pending_transactions~dump();
         authorized_addresses = ds~load_dict();
+        authorized_addresses~dump();
         total_approval_points = ds~load_uint(32);
-        total_profit_points = ds~load_uint(32); 
+        total_approval_points~dump();
+        total_profit_points = ds~load_uint(32);
+        total_profit_points~dump();
         total_profit_reserved = ds~load_coins();
+        total_profit_reserved~dump();
         ds.end_parse();
     }
     ~strdump("End load_data()");
@@ -179,10 +198,13 @@ const int fee::start_points_sale = 11000000000;
     ~strdump("Start sending invites to A DAO");
     (int passcode, cell authorized_address_info, int success?) = pending_invitations.udict_get_min_ref?(32);
     while (success?) {
+        ~strdump("Start sending invitation");
         slice authorized_address_info_cs = authorized_address_info.begin_parse();
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
         int approval_points = authorized_address_info_cs~load_uint(32);
+        approval_points~dump();
         int profit_points = authorized_address_info_cs~load_uint(32);
+        profit_points~dump();
         cell msg = 
             begin_cell()
                 .store_uint(0x18, 6)
@@ -202,6 +224,7 @@ const int fee::start_points_sale = 11000000000;
         passcode += 1;
         (authorized_address_info, success?) = pending_invitations.udict_get_ref?(32, passcode);
         active? = true;
+        ~strdump("End sending invitation");
     }
     ~strdump("Terminate sending invites to A DAO");
 }
@@ -224,22 +247,32 @@ const int fee::start_points_sale = 11000000000;
     load_data();
     if (op == op::approve_transaction) {
         ~strdump("Start transaction approval");
+        next_transaction_index~dump();
         int transaction_index = in_msg_body~load_uint(32);
         ~strdump("Start sender authorization");
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
-        slice authorized_address = authorized_address_info_cs~load_msg_addr();
-        throw_unless(222, success? & equal_slices(sender_address, authorized_address));
+        throw_unless(error::unauthorized_address, success?);
         ~strdump("Start points parsing");
         int approval_points = authorized_address_info_cs~load_uint(32);
+        ~strdump("approval_points");
+        approval_points~dump();
         int profit_points = authorized_address_info_cs~load_uint(32);
+        ~strdump("profit_points");
+        approval_points~dump();
         ~strdump("Get transaction by transaction_index");
         transaction_index~dump();
         (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
-        throw_unless(200, success?);
+        success?~dump();
+        throw_unless(error::transaction_not_found, success?);
         ~strdump("Parse transaction");
         slice transaction_cs = transaction.begin_parse();
         int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
+        transaction_type~dump();
+        if (transaction_type == tt::put_up_points_for_sale) {
+            ~strdump("Check funds suffiency for put_up_points_for_sale");
+            throw_unless(error::unsufficent_balance_to_put_up_points_for_sale, (my_balance - total_profit_reserved) > points_seller_creation_fee);
+        }
         int deadline = transaction_cs~load_uint(32); ;; deadline
         cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
         cell approvals = transaction_cs~load_dict(); ;; approvals
@@ -247,20 +280,16 @@ const int fee::start_points_sale = 11000000000;
         ~strdump("Add approve to approvals dictionary");
         int sender_address_sha256 = slice_hash(sender_address);
         (approvals, int success?) = approvals.udict_add?(256, sender_address_sha256, begin_cell().end_cell().begin_parse());
-        ~strdump("Throw if double approval");
-        throw_unless(666, success?);
+        throw_unless(error::double_approval_attempt, success?);
         ~strdump("Count approvals");
         int approvals_for_approval = total_approval_points * agreement_percent_numerator / agreement_percent_denominator;
         approval_points_recieved = approval_points_recieved + approval_points;
         ~strdump("Delete old transaction state from pending_transactions");
         (pending_transactions, int success?) = pending_transactions.udict_delete?(32, transaction_index);
-        throw_unless(666, success?);
+        throw_unless(error::pending_transaction_removal_fail, success?);
         ~strdump("Start check if sufficient approvals to start actions");
         if (approval_points_recieved > approvals_for_approval) {
             slice transaction_info_cs = transaction_info.begin_parse();
-            if (transaction_type == tt::put_up_points_for_sale) {
-                throw_unless(666, (my_balance - total_profit_reserved) > fee::start_points_sale);
-            }
             if (transaction_type == tt::invite_address) {
                 ~strdump("Start Transaction Approval: Invite Address");
                 (int last_passcode, _, _) = pending_invitations.udict_get_max_ref?(32);
@@ -312,7 +341,7 @@ const int fee::start_points_sale = 11000000000;
                 ~strdump("Start Transaction Approval: Send Withdraw Funds");
                 int profitable_address_passcode = transaction_info_cs~load_uint(32);
                 (cell profitable_address_info, int success?) = profitable_addresses.udict_get_ref?(32, profitable_address_passcode);
-                throw_unless(222, success?);
+                throw_unless(error::wrong_profitable_address_passcode, success?);
                 slice profitable_address_info_cs = profitable_address_info.begin_parse();
                 slice profitable_address = profitable_address_info_cs~load_msg_addr();
                 var msg = begin_cell()
@@ -361,7 +390,7 @@ const int fee::start_points_sale = 11000000000;
                 slice recipient = transaction_info_cs~load_msg_addr(); ;; recipient
                 int amount = transaction_info_cs~load_uint(32); ;; amount
                 cell msg_body = transaction_info_cs~load_ref(); ;; msg_body
-                throw_if(666, amount > my_balance - total_profit_reserved);
+                throw_unless(error::unsufficent_balance_for_arbitrary_transaction, amount < my_balance - total_profit_reserved);
                 var msg = 
                     begin_cell()
                         .store_uint(0x18, 6)
@@ -393,7 +422,7 @@ const int fee::start_points_sale = 11000000000;
                 ~strdump("Get sender points info");
                 int points_sender_sha256 = slice_hash(points_sender);
                 (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
-                throw_unless(666, success?);
+                throw_unless(error::unauthorized_address, success?);
                 slice points_sender_address = points_sender_info_cs~load_msg_addr();
                 int sender_approval_points = points_sender_info_cs~load_uint(32);
                 int sender_profit_points = points_sender_info_cs~load_uint(32);
@@ -428,7 +457,7 @@ const int fee::start_points_sale = 11000000000;
                 (int key, slice value, int flag) = sender_approved_transactions.udict_get_min?(32);
                 while (flag) {
                     (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
-                    throw_unless(200, success?);
+                    throw_unless(error::transaction_not_found, success?);
                     ~strdump("Parse transaction");
                     slice transaction_cs = transaction.begin_parse();
                     int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
@@ -438,7 +467,7 @@ const int fee::start_points_sale = 11000000000;
                     int approval_points_recieved = transaction_cs~load_uint(32); ;; approval_points_recieved
                     ~strdump("Delete old transaction state from pending_transactions");
                     (pending_transactions, int success?) = pending_transactions.udict_delete?(32, transaction_index);
-                    throw_unless(666, success?);
+                    throw_unless(error::transaction_not_found, success?);
                     ~strdump("Delete sender from approvals dict");
                     int points_sender_address_sha256 = slice_hash(points_sender);
                     (approvals, int flag) = approvals.udict_delete?(256, points_sender_address_sha256);
@@ -462,14 +491,14 @@ const int fee::start_points_sale = 11000000000;
                     ~strdump("Delete sender from authorized_addresses if all points transfered");
                     int sender_address_sha256 = slice_hash(sender_address);
                     (authorized_addresses, int success?) = authorized_addresses.udict_delete?(256, sender_address_sha256);
-                    throw_unless(666, success?);
+                    throw_unless(error::unauthorized_address, success?);
                 }
                 save_data();
                 just_notify_master(op, transaction_type);
                 return();
             }
             if (transaction_type == tt::put_up_points_for_sale) {
-                ~strdump("Start Transaction Approval: Delete Pending Invitations");
+                ~strdump("Start Transaction Approval: Put Up Points For Sale");
                 slice seller_address = transaction_info_cs~load_msg_addr();
                 slice buyer_address = transaction_info_cs~load_msg_addr();
                 int approval_points_for_sale = transaction_info_cs~load_uint(32);
@@ -479,7 +508,7 @@ const int fee::start_points_sale = 11000000000;
                     begin_cell()
                         .store_uint(0x18, 6)
                         .store_slice(a_dao_master)
-                        .store_coins(fee::start_points_sale)
+                        .store_coins(points_seller_creation_fee)
                         .store_uint(1, 107)
                         .store_ref(
                             begin_cell()
@@ -542,13 +571,14 @@ const int fee::start_points_sale = 11000000000;
     }
     if (op == op::propose_transaction) {
         ~strdump("Start transaction proposal");
+        next_transaction_index~dump();
         ~strdump("Start proposal initiator authorization");
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
-        slice authorized_address = authorized_address_info_cs~load_msg_addr();
-        throw_unless(222, success? & equal_slices(sender_address, authorized_address));
+        throw_unless(error::unauthorized_address, success?);
         ~strdump("Start proposal parsing");
         int transaction_type = in_msg_body.preload_uint(32);
+        transaction_type~dump();
         int deadline = in_msg_body.preload_uint(32);
         cell transaction_info = in_msg_body.preload_ref();
         ~strdump("Convert transaction_info to slice");
@@ -559,8 +589,11 @@ const int fee::start_points_sale = 11000000000;
         if (transaction_type == tt::invite_address) {
             ~strdump("Start Proposal: Invite Address");
             slice address_to_invite = transaction_info_cs~load_msg_addr();
+            address_to_invite~dump();
             int approval_points = transaction_info_cs~load_uint(32);
+            approval_points~dump();
             int profit_points = transaction_info_cs~load_uint(32);
+            profit_points~dump();
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
@@ -651,7 +684,7 @@ const int fee::start_points_sale = 11000000000;
             int amount = transaction_info_cs~load_coins(); ;; amount
             transaction_info_cs~load_ref(); ;; msg_body
             ~strdump("Check the integrity of reserves");
-            throw_if(666, amount > my_balance - total_profit_reserved);
+            throw_unless(error::unsufficent_balance_for_arbitrary_transaction, amount <= my_balance - total_profit_reserved);
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
@@ -698,8 +731,8 @@ const int fee::start_points_sale = 11000000000;
             ~strdump("Check points availability");
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
-            throw_if(666, approval_points_in_transfer > approval_points);
-            throw_if(777, profit_points_in_transfer > profit_points);
+            throw_unless(error::unsufficent_approval_points, approval_points_in_transfer <= approval_points);
+            throw_unless(error::unsufficent_profit_points, profit_points_in_transfer <= profit_points);
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
@@ -726,14 +759,15 @@ const int fee::start_points_sale = 11000000000;
         }
         if (transaction_type == tt::put_up_points_for_sale) {
             ~strdump("Start Transaction Proposal: Put Up Points For Sale");
+            transaction_type~dump();
             slice points_buyer = transaction_info_cs~load_msg_addr();
             int approval_points_for_sale = transaction_info_cs~load_uint(32);
             int profit_points_for_sale = transaction_info_cs~load_uint(32);
             ~strdump("Check points availability");
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
-            throw_if(666, approval_points_for_sale > approval_points);
-            throw_if(777, profit_points_for_sale > profit_points);
+            throw_unless(error::unsufficent_approval_points, approval_points_for_sale <= approval_points);
+            throw_unless(error::unsufficent_profit_points, profit_points_for_sale <= profit_points);
             ~strdump("Add transaction to pending_transactions");
             pending_transactions~udict_set_ref(
                 32, 
@@ -799,6 +833,15 @@ const int fee::start_points_sale = 11000000000;
             return();
         }
     }
+    if (op == op::top_up_balance) {
+        ~strdump("Start toping up a dao balance");
+        int sender_address_sha256 = slice_hash(sender_address);
+        (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
+        throw_unless(error::unauthorized_address, success?);
+        save_data();
+        just_notify_master(op, tt::transaction_without_type);
+        return();
+    }
     if (op == op::revoke_approval) {
 
     }
@@ -850,7 +893,7 @@ const int fee::start_points_sale = 11000000000;
             ~strdump("Start authorized_address removal");
             int sender_address_sha256 = slice_hash(sender_address);
             (authorized_addresses, int success?) = authorized_addresses.udict_delete?(256, sender_address_sha256);
-            throw_unless(666, success?);
+            throw_unless(error::failed_authorized_address_removal, success?);
             ~strdump("Start points update");
             total_approval_points -= approval_points;
             total_profit_points -= profit_points;
@@ -868,7 +911,9 @@ const int fee::start_points_sale = 11000000000;
         if (success? & equal_slices(sender_address, authorized_address)) {
             ~strdump("Sender authorized");
             int approval_points = pending_invitation_info_cs~load_uint(32);
+            approval_points~dump();
             int profit_points = pending_invitation_info_cs~load_uint(32);
+            profit_points~dump();
             slice authorized_address_info_cs = 
                 begin_cell()
                     .store_slice(authorized_address)
@@ -892,7 +937,7 @@ const int fee::start_points_sale = 11000000000;
     }
     if (op == op::activate_a_dao) {
         ~strdump("Start A DAO Activation");
-        throw_unless(333, equal_slices(sender_address, deployer_address));
+        throw_unless(error::sender_not_deployer, equal_slices(sender_address, deployer_address));
         active? = true;
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
@@ -907,8 +952,10 @@ const int fee::start_points_sale = 11000000000;
     }
     if (op == op::process_deploy_message) {
         ~strdump("Start deploy message processing");
-        throw_unless(666, equal_slices(sender_address, a_dao_master));
-        transaction_fee = in_msg_body~load_uint(32);
+        throw_unless(error::sender_not_a_dao_master, equal_slices(sender_address, a_dao_master));
+        transaction_fee = in_msg_body~load_coins();
+        points_seller_creation_fee = in_msg_body~load_coins();
+        points_seller_creation_fee~dump();
         agreement_percent_numerator = 0;
         agreement_percent_denominator = 0;
         if (slice_bits(in_msg_body) > 0) { ;; If config added with deploy message

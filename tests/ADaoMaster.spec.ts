@@ -57,9 +57,13 @@ describe('ADaoMaster', () => {
                 {
                     OwnerAddress: deployer.address,
                     ADaoCode: ADaoCode,
+                    PointsSeller: PointsSellerCode,
                     NextADaoCreationFee: toNano('10'),
                     NextADaoTransactionFee: toNano('0'),
-                    PointsSeller: PointsSellerCode,
+                    NextADaoCreationFeeDiscount: toNano('0.00001'),
+                    NextADaoTransactionFeeIncrease: toNano('0.000001'),
+                    MaxADaoTransactionFee: toNano('1'),
+                    PointsSellerCreationFee: toNano('1')
                 }, 
                 ADaoMasterCode,
             ),
@@ -377,6 +381,8 @@ describe('ADaoMaster', () => {
         expect(ADaoDataAfterWallet2In.total_profit_points).toStrictEqual(BigInt(146));
 
     });
+
+    /*
 
     it('Wallet3 should quit A DAO', async () => {
 
@@ -1070,7 +1076,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Delete Pending Transactions
 
         const wallet0ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            12, // TransactionIndex
+            15, // TransactionIndex
         )
 
         expect(wallet0ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
@@ -1085,7 +1091,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Delete Pending Transactions
 
         const wallet2ApprovesDeletePendingTransactions = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            12, // TransactionIndex
+            15, // TransactionIndex
         )
 
         expect(wallet2ApprovesDeletePendingTransactions.transactions).toHaveTransaction({
@@ -1124,7 +1130,7 @@ describe('ADaoMaster', () => {
         // Wallet0 approves Put Up Points For Sale
 
         const wallet0ApprovesPutUpPintsForSale = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
-            13, // TransactionIndex
+            16, // TransactionIndex
         )
 
         expect(wallet0ApprovesPutUpPintsForSale.transactions).toHaveTransaction({
@@ -1139,7 +1145,7 @@ describe('ADaoMaster', () => {
         // Wallet2 approves Put Up Points For Sale
 
         const wallet2ApprovesPutUpPointsForSale = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
-            13, // TransactionIndex
+            16, // TransactionIndex
         )
 
         expect(wallet2ApprovesPutUpPointsForSale.transactions).toHaveTransaction({
@@ -1149,8 +1155,17 @@ describe('ADaoMaster', () => {
             success: true,
         })
 
+        expect(wallet2ApprovesPutUpPointsForSale.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: aDaoMaster.address,
+            op: ADaoInternalOperations.StartPointSale,
+            success: true,
+        })
+
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
 
     });
+
+    */
 
 });

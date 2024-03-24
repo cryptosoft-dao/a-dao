@@ -30,11 +30,25 @@ global int points_seller_creation_fee; ;; uint32
     ~strdump("Start load_data()");
     slice ds = get_data().begin_parse();
     owner_address = ds~load_msg_addr();
+    owner_address~dump();
     a_dao_code = ds~load_ref();
+    a_dao_code~dump();
     next_a_dao_creation_fee = ds~load_coins();
+    next_a_dao_creation_fee~dump();
     next_a_dao_transaction_fee = ds~load_coins();
+    next_a_dao_transaction_fee~dump();
+    next_a_dao_creation_fee_discount = ds~load_coins();
+    next_a_dao_creation_fee_discount~dump();
+    next_a_dao_transaction_fee_increase = ds~load_coins();
+    next_a_dao_transaction_fee_increase~dump();
+    max_a_dao_transaction_fee = ds~load_coins();
+    max_a_dao_transaction_fee~dump();
     points_seller_code = ds~load_ref();
+    points_seller_code~dump();
     points_seller_next_index = ds~load_uint(32);
+    points_seller_next_index~dump();
+    points_seller_creation_fee = ds~load_coins();
+    points_seller_creation_fee~dump();
     ds.end_parse();
     ~strdump("End load_data()");
 }
@@ -45,10 +59,14 @@ global int points_seller_creation_fee; ;; uint32
         begin_cell()
             .store_slice(owner_address)
             .store_ref(a_dao_code)
-            .store_uint(next_a_dao_creation_fee, 32)
-            .store_uint(next_a_dao_transaction_fee, 32)
+            .store_coins(next_a_dao_creation_fee)
+            .store_coins(next_a_dao_transaction_fee)
+            .store_coins(next_a_dao_creation_fee_discount)
+            .store_coins(next_a_dao_transaction_fee_increase)
+            .store_coins(max_a_dao_transaction_fee)
             .store_ref(points_seller_code)
             .store_uint(points_seller_next_index, 32)
+            .store_coins(points_seller_creation_fee)
         .end_cell()
     );
     ~strdump("End save_data()");
@@ -138,7 +156,8 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
             .store_ref(
                 begin_cell()
                     .store_uint(op::deploy_a_dao, 32)
-                    .store_uint(next_a_dao_transaction_fee, 32)
+                    .store_coins(next_a_dao_transaction_fee)
+                    .store_coins(points_seller_creation_fee)
                 .end_cell()
             )
         .end_cell();

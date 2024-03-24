@@ -12,9 +12,13 @@ import {
 export type ADaoMasterConfig = {
     OwnerAddress: Address;
     ADaoCode: Cell;
-    PointsSeller: Cell;
     NextADaoCreationFee: number | bigint;
     NextADaoTransactionFee: number | bigint;
+    NextADaoCreationFeeDiscount: number | bigint;
+    NextADaoTransactionFeeIncrease: number | bigint;
+    MaxADaoTransactionFee: number | bigint;
+    PointsSeller: Cell;
+    PointsSellerCreationFee: number | bigint;
 }
 
 export function serializeADaoMasterConfigToCell(config: ADaoMasterConfig): Cell {
@@ -23,8 +27,12 @@ export function serializeADaoMasterConfigToCell(config: ADaoMasterConfig): Cell 
         .storeRef(config.ADaoCode)
         .storeCoins(config.NextADaoCreationFee)
         .storeCoins(config.NextADaoTransactionFee)
+        .storeCoins(config.NextADaoCreationFeeDiscount)
+        .storeCoins(config.NextADaoTransactionFeeIncrease)
+        .storeCoins(config.MaxADaoTransactionFee)
         .storeRef(config.PointsSeller)
         .storeUint(0, 32)
+        .storeCoins(config.PointsSellerCreationFee)
     .endCell();
 }
 
