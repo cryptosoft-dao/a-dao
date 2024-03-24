@@ -1119,4 +1119,38 @@ describe('ADaoMaster', () => {
 
     });
 
+    it('Should Approve Transaction: Put Up Points For Sale', async () => {
+
+        // Wallet0 approves Put Up Points For Sale
+
+        const wallet0ApprovesPutUpPintsForSale = await firstADao.sendApprove(wallet0.getSender(), toNano('0.33'), 
+            13, // TransactionIndex
+        )
+
+        expect(wallet0ApprovesPutUpPintsForSale.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        });
+
+        printTransactionFees(wallet0ApprovesPutUpPintsForSale.transactions);
+
+        // Wallet2 approves Put Up Points For Sale
+
+        const wallet2ApprovesPutUpPointsForSale = await firstADao.sendApprove(wallet2.getSender(), toNano('0.33'), 
+            13, // TransactionIndex
+        )
+
+        expect(wallet2ApprovesPutUpPointsForSale.transactions).toHaveTransaction({
+            from: wallet2.address,
+            to: firstADao.address,
+            op: ADaoOperationCodes.ApproveTransaction,
+            success: true,
+        })
+
+        printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
+
+    });
+
 });
