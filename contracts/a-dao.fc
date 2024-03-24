@@ -20,6 +20,7 @@ const int op::transfer_bought_points = 12;
 ;; Internal Operations
 
 const int op::collect_funds = 81;
+const int op::start_points_sale = 82;
 
 ;; Transaction Types
 
@@ -34,6 +35,10 @@ const int tt::transfer_points = 7;
 const int tt::put_up_points_for_sale = 8;
 const int tt::delete_pending_invitations = 9;
 const int tt::delete_pending_transactions = 10;
+
+;; Constants
+
+const int fee::start_points_sale = 11000000000;
 
 ;; Storage globals
 
@@ -253,6 +258,9 @@ const int tt::delete_pending_transactions = 10;
         ~strdump("Start check if sufficient approvals to start actions");
         if (approval_points_recieved > approvals_for_approval) {
             slice transaction_info_cs = transaction_info.begin_parse();
+            if (op::start_points_sale) {
+                throw_unless(666, balance - total_profit_reserved > fee::start_points_sale)
+            }
             if (transaction_type == tt::invite_address) {
                 ~strdump("Start Transaction Approval: Invite Address");
                 (int last_passcode, _, _) = pending_invitations.udict_get_max_ref?(32);
@@ -466,7 +474,28 @@ const int tt::delete_pending_transactions = 10;
                 slice buyer_address = transaction_info_cs~load_msg_addr();
                 int approval_points_for_sale = transaction_info_cs~load_uint(32);
                 int profit_points_for_sale = transaction_info_cs~load_uint(32);
-
+                ~strdump("Request master to initiate sale");
+                var msg = 
+                    begin_cell()
+                        .store_uint(0x18, 6)
+                        .store_slice(recipient)
+                        .store_coins(amount)
+                        .store_uint(1, 107)
+                        .store_ref(
+                            begin_cell()
+                                .store_uint(op::start_points_sale, 32)
+                                .store_slice(my_address())
+                                .store_slice(seller_address)
+                                .store_slice(buyer_address)
+                                .store_uint(approval_points_for_sale)
+                                .store_uint(profit_points_for_sale)
+                            .end_cell()
+                        )
+                    .end_cell();
+                send_raw_message(msg, 0);
+                save_data();
+                just_notify_master(op, transaction_type);
+                return();
             }
             if (transaction_type == tt::delete_pending_invitations) {
                 ~strdump("Start Transaction Approval: Delete Pending Invitations");
