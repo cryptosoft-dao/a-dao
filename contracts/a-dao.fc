@@ -42,7 +42,7 @@ const int tt::delete_pending_transactions = 10;
 
     ;; Initial
 
-    global int active?; ;; uint1
+    global int status; ;; uint1
     global slice a_dao_master; ;; slice 257bits
     global slice deployer_address; ;; slice 257bits
     global int transaction_fee; ;; uint32
@@ -94,7 +94,7 @@ const int tt::delete_pending_transactions = 10;
     ~strdump("Start save_data()");
     set_data(
         begin_cell()
-            .store_int(active?, 1)
+            .store_int(status, 2)
             .store_slice(a_dao_master)
             .store_slice(deployer_address)
             .store_coins(transaction_fee)
@@ -119,14 +119,14 @@ const int tt::delete_pending_transactions = 10;
 () load_data() impure inline { 
     ~strdump("Start load_data()");
     slice ds = get_data().begin_parse();
-    active? = ds~load_int(1);
-    active?~dump();
+    status = ds~load_int(2);
+    status~dump();
     a_dao_master = ds~load_msg_addr();
     a_dao_master~dump();
     deployer_address = ds~load_msg_addr();
     deployer_address~dump();
-    if (active? == false) {
-        ~strdump("active? == false");
+    if (status == -1) { ;; inactive
+        ~strdump("status == -1");
         transaction_fee = 0;
         points_seller_creation_fee = 0;
         agreement_percent_numerator = 0;
@@ -141,35 +141,67 @@ const int tt::delete_pending_transactions = 10;
         total_approval_points = 0;
         total_profit_points = 0; 
         total_profit_reserved = 0;
-    } else {
-        ~strdump("active? == true");
+    }
+    if (status == 0) { ;; initialized
+        ~strdump("status == 0");
         transaction_fee = ds~load_coins();
+        points_seller_creation_fee = ds~load_coins();
+        agreement_percent_numerator = 0;
+        agreement_percent_denominator = 0;
+        profit_reserve_percent_numerator = 0; 
+        profit_reserve_percent_denominator = 0;
+        profitable_addresses = new_dict();
+        pending_invitations = new_dict();
+        next_transaction_index = 0;
+        pending_transactions = new_dict();
+        authorized_addresses = new_dict();
+        total_approval_points = 0;
+        total_profit_points = 0; 
+        total_profit_reserved = 0;
+    }
+    if (status == 1) { ;; active
+        ~strdump("status == 1");
+        transaction_fee = ds~load_coins();
+        ~strdump("transaction_fee");
         transaction_fee~dump();
         points_seller_creation_fee = ds~load_coins();
+        ~strdump("points_seller_creation_fee");
         points_seller_creation_fee~dump();
         agreement_percent_numerator = ds~load_uint(32);
+        ~strdump("agreement_percent_numerator");
         agreement_percent_numerator~dump();
         agreement_percent_denominator = ds~load_uint(32);
+        ~strdump("agreement_percent_denominator");
         agreement_percent_denominator~dump();
         profit_reserve_percent_numerator = ds~load_uint(32);
+        ~strdump("profit_reserve_percent_numerator");
         profit_reserve_percent_numerator~dump();
         profit_reserve_percent_denominator = ds~load_uint(32);
+        ~strdump("profit_reserve_percent_denominator");
         profit_reserve_percent_denominator~dump();
         profitable_addresses = ds~load_dict();
+        ~strdump("profitable_addresses");
         profitable_addresses~dump();
         pending_invitations = ds~load_dict();
+        ~strdump("pending_invitations");
         pending_invitations~dump();
         next_transaction_index = ds~load_uint(32);
+        ~strdump("next_transaction_index");
         next_transaction_index~dump();
         pending_transactions = ds~load_dict();
+        ~strdump("pending_transactions");
         pending_transactions~dump();
         authorized_addresses = ds~load_dict();
+        ~strdump("authorized_addresses");
         authorized_addresses~dump();
         total_approval_points = ds~load_uint(32);
+        ~strdump("total_approval_points");
         total_approval_points~dump();
         total_profit_points = ds~load_uint(32);
+        ~strdump("total_profit_points");
         total_profit_points~dump();
         total_profit_reserved = ds~load_coins();
+        ~strdump("total_profit_reserved");
         total_profit_reserved~dump();
         ds.end_parse();
     }
@@ -223,7 +255,6 @@ const int tt::delete_pending_transactions = 10;
         send_raw_message(msg, 0);
         passcode += 1;
         (authorized_address_info, success?) = pending_invitations.udict_get_ref?(32, passcode);
-        active? = true;
         ~strdump("End sending invitation");
     }
     ~strdump("Terminate sending invites to A DAO");
@@ -260,7 +291,7 @@ const int tt::delete_pending_transactions = 10;
         approval_points~dump();
         int profit_points = authorized_address_info_cs~load_uint(32);
         ~strdump("profit_points");
-        approval_points~dump();
+        profit_points~dump();
         ~strdump("Get transaction by transaction_index");
         transaction_index~dump();
         (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
@@ -527,7 +558,7 @@ const int tt::delete_pending_transactions = 10;
                             .end_cell()
                         )
                     .end_cell();
-                send_raw_message(msg, 0);
+                send_raw_message(msg, 1);
                 save_data();
                 just_notify_master(op, transaction_type);
                 return();
@@ -945,7 +976,7 @@ const int tt::delete_pending_transactions = 10;
     if (op == op::activate_a_dao) {
         ~strdump("Start A DAO Activation");
         throw_unless(error::sender_not_deployer, equal_slices(sender_address, deployer_address));
-        active? = true;
+        throw_unless(error::status_not_initiated, status == 0);
         agreement_percent_numerator = in_msg_body~load_uint(32);
         agreement_percent_denominator = in_msg_body~load_uint(32);
         profit_reserve_percent_numerator = in_msg_body~load_uint(32);
@@ -953,6 +984,7 @@ const int tt::delete_pending_transactions = 10;
         profitable_addresses = in_msg_body~load_dict();
         pending_invitations = in_msg_body~load_dict();
         send_invites_to_a_dao(pending_invitations);
+        status = 1;
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -961,6 +993,7 @@ const int tt::delete_pending_transactions = 10;
         ~strdump("Start deploy message processing");
         throw_unless(error::sender_not_a_dao_master, equal_slices(sender_address, a_dao_master));
         transaction_fee = in_msg_body~load_coins();
+        points_seller_creation_fee~dump();
         points_seller_creation_fee = in_msg_body~load_coins();
         points_seller_creation_fee~dump();
         agreement_percent_numerator = 0;
@@ -975,7 +1008,7 @@ const int tt::delete_pending_transactions = 10;
         authorized_addresses = new_dict();
         total_approval_points = 0;
         total_profit_points = 0;
-        active? = false;
+        status = 0;
         save_data();
         just_notify_master(op, tt::transaction_without_type);
         return();
@@ -988,7 +1021,7 @@ const int tt::delete_pending_transactions = 10;
 (int, slice, slice, int, int, int, int, int, cell, cell, cell, cell, int, int, int) get_a_dao_data() method_id {
     load_data();
     return (
-        active?, ;; int1
+        status, ;; int1
         a_dao_master, ;; slice
         deployer_address, ;; slice
         transaction_fee, ;; uint32

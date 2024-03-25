@@ -179,7 +179,7 @@ describe('ADaoMaster', () => {
         printTransactionFees(ADaoMasterActivationResult.transactions);
 
         const ADaoDataAfterActivation = await firstADao.getADaoData();
-        expect(ADaoDataAfterActivation.active).toStrictEqual(-1);
+        expect(ADaoDataAfterActivation.active).toStrictEqual(1);
         const profitable_addresses_dict = ADaoDataAfterActivation.profitable_addresses;
         const result = profitable_addresses_dict!.beginParse().loadDictDirect(Dictionary.Keys.BigUint(32), Dictionary.Values.Cell());
         expect(result.get(BigInt(0))?.beginParse().loadAddress()).toEqualAddress(profitableAddress.address);
