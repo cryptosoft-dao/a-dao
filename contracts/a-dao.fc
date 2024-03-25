@@ -560,7 +560,6 @@ const int tt::delete_pending_transactions = 10;
                     .end_cell();
                 send_raw_message(msg, 1);
                 save_data();
-                just_notify_master(op, transaction_type);
                 return();
             }
             if (transaction_type == tt::delete_pending_invitations) {
@@ -798,6 +797,7 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Start Transaction Proposal: Put Up Points For Sale");
             transaction_type~dump();
             slice points_buyer = transaction_info_cs~load_msg_addr();
+            int price = transaction_info_cs~load_coins();
             int approval_points_for_sale = transaction_info_cs~load_uint(32);
             int profit_points_for_sale = transaction_info_cs~load_uint(32);
             ~strdump("Check points availability");
@@ -816,6 +816,7 @@ const int tt::delete_pending_transactions = 10;
                         begin_cell()
                             .store_slice(sender_address)
                             .store_slice(points_buyer)
+                            .store_coins(price)
                             .store_uint(approval_points_for_sale, 32)
                             .store_uint(profit_points_for_sale, 32)
                         .end_cell()
@@ -971,7 +972,8 @@ const int tt::delete_pending_transactions = 10;
         return();
     }
     if (op == op::transfer_bought_points) {
-        
+        ~strdump("Start A DAO Activation");
+
     }
     if (op == op::activate_a_dao) {
         ~strdump("Start A DAO Activation");

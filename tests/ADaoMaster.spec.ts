@@ -35,7 +35,7 @@ describe('ADaoMaster', () => {
 
         ADaoMasterCode = await compile('ADaoMaster');
         ADaoCode = await compile('ADao');
-        PointsSellerCode = await compile('ADao');
+        PointsSellerCode = await compile('PointsSeller');
 
         blockchain = await Blockchain.create();
         blockchain.now = blockchainStartTime;
@@ -1144,6 +1144,7 @@ describe('ADaoMaster', () => {
         const proposeTransferPoints = await firstADao.sendPutUpPointsForSale(wallet2.getSender(), toNano('0.33'), 
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
             wallet0.address, // PointsBuyer
+            toNano(100), // Price
             BigInt(10), // ApprovalPointsForSale
             BigInt(10), // ProfitPointsForSale
         )
@@ -1194,6 +1195,13 @@ describe('ADaoMaster', () => {
             to: aDaoMaster.address,
             op: ADaoInternalOperations.StartPointSale,
             success: true,
+        })
+
+        const pointsSellerAddress = await aDaoMaster.getPointsSellerAddressByIndex(BigInt(0));
+
+        expect(wallet2ApprovesPutUpPointsForSale.transactions).toHaveTransaction({
+            from: aDaoMaster.address,
+            to: pointsSellerAddress,
         })
 
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);

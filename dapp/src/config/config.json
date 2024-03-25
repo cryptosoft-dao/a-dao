@@ -308,7 +308,7 @@
             "fieldTitle": ""
           }
         },
-        "outNames": []
+        "outNames": {}
       },
       "getPendingTransactionsData": {
         "tabName": "",
@@ -317,7 +317,7 @@
             "fieldTitle": ""
           }
         },
-        "outNames": []
+        "outNames": {}
       },
       "getAuthorizedAddressData": {
         "tabName": "",
@@ -326,7 +326,7 @@
             "fieldTitle": ""
           }
         },
-        "outNames": []
+        "outNames": {}
       }
     },
     "definedTypes": {

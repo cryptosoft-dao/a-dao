@@ -397,6 +397,7 @@ export class ADao implements Contract {
         value: bigint,
         Deadline: number | bigint,
         PointsBuyer: Address,
+        Price: number | bigint,
         ApprovalPointsForSale: number | bigint,
         ProfitPointsForSale: number | bigint,
     ) {
@@ -411,6 +412,7 @@ export class ADao implements Contract {
                     .storeRef( // cell transaction_info
                         beginCell()
                             .storeAddress(PointsBuyer)
+                            .storeCoins(Price)
                             .storeUint(ApprovalPointsForSale, 32)
                             .storeUint(ProfitPointsForSale, 32)
                         .endCell()

@@ -213,7 +213,7 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
 
 (slice) get_points_seller_address_by_index(int index) method_id {
     load_data();
-    return calculate_points_seller_address(calculate_points_seller_initial_state(points_seller_next_index, points_seller_code));
+    return calculate_points_seller_address(calculate_points_seller_initial_state(index, points_seller_code));
 }
 
 (int) get_next_a_dao_creation_fee() method_id {
