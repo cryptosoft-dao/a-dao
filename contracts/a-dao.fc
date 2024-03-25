@@ -971,7 +971,7 @@ const int tt::delete_pending_transactions = 10;
         return();
     }
     if (op == op::transfer_bought_points) {
-
+        
     }
     if (op == op::activate_a_dao) {
         ~strdump("Start A DAO Activation");
@@ -1038,8 +1038,6 @@ const int tt::delete_pending_transactions = 10;
         total_profit_reserved ;; uint32
     );
 }
-
-
 
 (slice, int, int, cell) get_authorized_address_data(cell authorized_address_cell) method_id {
     load_data();

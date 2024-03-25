@@ -232,6 +232,62 @@
             "fieldTitle": ""
           }
         }
+      },
+      "sendFundsToCollect": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeSendCollectFunds": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "ProfitableAddressPasscode": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendPutUpPointsForSale": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "PointsBuyer": {
+            "fieldTitle": ""
+          },
+          "ApprovalPointsForSale": {
+            "fieldTitle": ""
+          },
+          "ProfitPointsForSale": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendProposeDeletePendingTransactions": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          },
+          "Deadline": {
+            "fieldTitle": ""
+          },
+          "PendingTransactionsForRemoval": {
+            "fieldTitle": ""
+          }
+        }
       }
     },
     "getFunctions": {
@@ -244,6 +300,33 @@
         "tabName": "",
         "params": {},
         "outNames": {}
+      },
+      "getPendingInvitationData": {
+        "tabName": "",
+        "params": {
+          "passcode": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
+      },
+      "getPendingTransactionsData": {
+        "tabName": "",
+        "params": {
+          "key": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
+      },
+      "getAuthorizedAddressData": {
+        "tabName": "",
+        "params": {
+          "authorized_address_cell": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
       }
     },
     "definedTypes": {
@@ -332,6 +415,57 @@
             "fieldTitle": ""
           }
         }
+      },
+      "PendingInvitationsData": {
+        "shownName": "",
+        "properties": {
+          "authorized_address": {
+            "fieldTitle": ""
+          },
+          "approval_points": {
+            "fieldTitle": ""
+          },
+          "profit_points": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "PendingTransactionsData": {
+        "shownName": "",
+        "properties": {
+          "transaction_type": {
+            "fieldTitle": ""
+          },
+          "deadline": {
+            "fieldTitle": ""
+          },
+          "transaction_info": {
+            "fieldTitle": ""
+          },
+          "approvals": {
+            "fieldTitle": ""
+          },
+          "approval_points_recieved": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "AuthorizedAddressData": {
+        "shownName": "",
+        "properties": {
+          "authorized_address": {
+            "fieldTitle": ""
+          },
+          "approval_points": {
+            "fieldTitle": ""
+          },
+          "profit_points": {
+            "fieldTitle": ""
+          },
+          "approved_transactions": {
+            "fieldTitle": ""
+          }
+        }
       }
     }
   },
@@ -382,9 +516,31 @@
           },
           "NextADaoTransactionFee": {
             "fieldTitle": ""
+          },
+          "NextADaoCreationFeeDiscount": {
+            "fieldTitle": ""
+          },
+          "NextADaoTransactionFeeIncrease": {
+            "fieldTitle": ""
+          },
+          "MaxADaoTransactionFee": {
+            "fieldTitle": ""
+          },
+          "PointsSeller": {
+            "fieldTitle": ""
+          },
+          "PointsSellerCreationFee": {
+            "fieldTitle": ""
           }
         }
       }
     }
+  },
+  "PointsSeller": {
+    "defaultAddress": "",
+    "tabName": "",
+    "sendFunctions": {},
+    "getFunctions": {},
+    "definedTypes": {}
   }
 }

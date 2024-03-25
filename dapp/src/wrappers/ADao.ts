@@ -12,8 +12,9 @@ import {
     SendMode, 
     toNano 
 } from '@ton/core';
-import { ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
+import { ADaoInternalOperations, ADaoMasterOperationCodes, ADaoOperationCodes, ADaoTransactionTypes } from './Config';
 import { Slice } from '@ton/core';
+
 
 export type ADaoData = {
     active: number | bigint;
@@ -47,39 +48,37 @@ export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     .endCell();
 }
 
-export type ProfitableAddressValue = {
-    address: Address,
-}
-
-export function createProfitableAddressesValue(): DictionaryValue<ProfitableAddressValue> {
-    return {
-        serialize(src: ProfitableAddressValue, builder: Builder) {
-            builder.storeAddress(src.address);
-        },
-        parse: (src: Slice) => {
-            return {
-                address: src.loadAddress(),
-            };
-        },
-    };
-}
-
-export type PendingInvitationsValue = {
-    address: Address,
+export type PendingInvitationsData = {
+    authorized_address: Address,
     approval_points: number | bigint,
     profit_points: number | bigint,
 }
 
-export function createPendingInvitationsValue(): DictionaryValue<PendingInvitationsValue> {
+export type PendingTransactionsData = {
+    transaction_type: number | bigint;
+    deadline: number | bigint;
+    transaction_info: Cell;
+    approvals: Cell | null;
+    approval_points_recieved: number | bigint;
+}
+
+export type AuthorizedAddressData = {
+    authorized_address: Address;
+    approval_points: number | bigint;
+    profit_points: number | bigint;
+    approved_transactions: Cell | null;
+}
+
+export function createPendingInvitationsData(): DictionaryValue<PendingInvitationsData> {
     return {
-        serialize(src: PendingInvitationsValue, builder: Builder) {
-            builder.storeAddress(src.address);
+        serialize(src: PendingInvitationsData, builder: Builder) {
+            builder.storeAddress(src.authorized_address);
             builder.storeUint(src.approval_points, 32);
             builder.storeUint(src.profit_points, 32);
         },
         parse: (src: Slice) => {
             return {
-                address: src.loadAddress(),
+                authorized_address: src.loadAddress(),
                 approval_points: src.loadUint(32),
                 profit_points: src.loadUint(32),
             };
@@ -191,7 +190,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProfit(
+    async sendFundsToCollect(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -201,7 +200,7 @@ export class ADao implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body:
                 beginCell()
-                    .storeUint(ADaoOperationCodes.CollectProfit, 32)
+                    .storeUint(ADaoInternalOperations.CollectFunds, 32)
                 .endCell()
         });
     }
@@ -262,7 +261,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProposeWithdrawProfit(
+    async sendProposeSendCollectFunds(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -275,7 +274,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.WithdrawProfit, 32)
+                    .storeUint(ADaoTransactionTypes.SendCollectFunds, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
@@ -392,6 +391,34 @@ export class ADao implements Contract {
         });
     }
 
+    async sendPutUpPointsForSale(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        Deadline: number | bigint,
+        PointsBuyer: Address,
+        ApprovalPointsForSale: number | bigint,
+        ProfitPointsForSale: number | bigint,
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
+                    .storeUint(ADaoTransactionTypes.PutUpPointsForSale, 32)
+                    .storeUint(Deadline, 32)
+                    .storeRef( // cell transaction_info
+                        beginCell()
+                            .storeAddress(PointsBuyer)
+                            .storeUint(ApprovalPointsForSale, 32)
+                            .storeUint(ProfitPointsForSale, 32)
+                        .endCell()
+                    )
+                .endCell()
+        });
+    }
+
     async sendProposeDeletePendingInvitations(
         provider: ContractProvider,
         via: Sender,
@@ -405,7 +432,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(ADaoTransactionTypes.DeletePendingTransactions, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
@@ -416,7 +443,7 @@ export class ADao implements Contract {
         });
     }
 
-    async sendProposeDeleteTransactionsInvitations(
+    async sendProposeDeletePendingTransactions(
         provider: ContractProvider,
         via: Sender,
         value: bigint,
@@ -429,7 +456,7 @@ export class ADao implements Contract {
             body: 
                 beginCell()
                     .storeUint(ADaoOperationCodes.ProposeTransaction, 32)
-                    .storeUint(ADaoTransactionTypes.TransferPoints, 32)
+                    .storeUint(ADaoTransactionTypes.DeletePendingTransactions, 32)
                     .storeUint(Deadline, 32)
                     .storeRef( // cell transaction_info
                         beginCell()
@@ -466,6 +493,60 @@ export class ADao implements Contract {
         return result.stack.readNumber(); // int1 active?
     }
 
+    async getPendingInvitationData(provider: ContractProvider, passcode: bigint): Promise<PendingInvitationsData> {
+
+        const result = await provider.get('get_pending_invitation_data', [{ type: 'int', value: passcode }]);
+
+        const authorized_address = result.stack.readAddress();
+        const approval_points = result.stack.readBigNumber();
+        const profit_points = result.stack.readBigNumber();
+
+        return {
+            authorized_address,
+            approval_points,
+            profit_points
+        };
+
+    }
+
+    async getPendingTransactionsData(provider: ContractProvider, key: bigint): Promise<PendingTransactionsData> {
+
+        const result = await provider.get('get_pending_transaction_data', [{ type: 'int', value: key }]);
+
+        const transaction_type = result.stack.readBigNumber();
+        const deadline = result.stack.readBigNumber();
+        const transaction_info = result.stack.readCell();
+        const approvals = result.stack.readCellOpt();
+        const approval_points_recieved = result.stack.readBigNumber();
+
+        return {
+            transaction_type,
+            deadline,
+            transaction_info,
+            approvals,
+            approval_points_recieved
+        };
+
+    }
+
+    async getAuthorizedAddressData(provider: ContractProvider, authorized_address_cell: Cell): Promise<AuthorizedAddressData> {
+
+        const result = await provider.get('get_authorized_address_data', [{ type: 'cell', cell: authorized_address_cell}])
+
+        const authorized_address = result.stack.readAddress();
+        const approval_points = result.stack.readBigNumber();
+        const profit_points = result.stack.readBigNumber();
+        const approved_transactions = result.stack.readCellOpt();
+
+        return {
+            authorized_address,
+            approval_points,
+            profit_points,
+            approved_transactions
+        };
+
+    }
+
     async getADaoData(provider: ContractProvider): Promise<ADaoData> {
 
         const result = await provider.get('get_a_dao_data', []);
@@ -485,7 +566,6 @@ export class ADao implements Contract {
         const total_approval_points = result.stack.readBigNumber();
         const total_profit_points = result.stack.readBigNumber();
         const total_profit_reserved = result.stack.readBigNumber();
-
 
         return {
             active,

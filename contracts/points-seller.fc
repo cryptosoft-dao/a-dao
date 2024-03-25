@@ -20,7 +20,7 @@ const int op::process_deploy_message = 4;
     global slice seller_address;
     global slice buyer_address;
     global int approval_points_for_sale;
-    global int profit_points_for_sale
+    global int profit_points_for_sale;
 
 ;; Storage functions
 
@@ -40,7 +40,7 @@ const int op::process_deploy_message = 4;
                     .store_uint(profit_points_for_sale, 32)
                 .end_cell()
             )
-        .end_cell())
+        .end_cell());
     ~strdump("End save_data()");
 }
 
@@ -48,11 +48,11 @@ const int op::process_deploy_message = 4;
     ~strdump("Start load_data()");
     slice ds = get_data().begin_parse();
     active? = ds~load_int(1);
-    a_dao_master = ds~load_slice();
+    a_dao_master = ds~load_msg_addr();
     index = ds~load_uint(32);
     if (active?) {
         a_dao = ds~load_msg_addr(); 
-        cell sale_info_cs = ds~load_ref().begin_parse();
+        slice sale_info_cs = ds~load_ref().begin_parse();
         seller_address = sale_info_cs~load_msg_addr();
         a_dao_master = sale_info_cs~load_msg_addr();
         approval_points_for_sale = sale_info_cs~load_uint(32);
@@ -71,7 +71,7 @@ const int op::process_deploy_message = 4;
     cell msg = begin_cell()
         .store_uint(0x10, 6)
         .store_slice(a_dao_master)
-        .store_coins(transaction_fee)
+        .store_coins(0)
         .store_uint(1, 107)
         .store_ref(
             begin_cell()
@@ -89,8 +89,8 @@ const int op::process_deploy_message = 4;
     load_data();
     if (in_msg_body.slice_empty?()) {
         ~strdump("Start purchase");
-        throw_unless(333, active?)
-        throw_unless(666, equal_slices?(sender_address, a_dao_master));
+        throw_unless(333, active?);
+        throw_unless(666, equal_slices(sender_address, a_dao_master));
 
         return ();
     }
@@ -110,11 +110,10 @@ const int op::process_deploy_message = 4;
 
 (slice, slice, int, int) get_sale_info() method_id {
     load_data();
-    sale_info_cs = sale_info.begin_parse();
     return (
-        sale_info_cs~load_msg_addr(), ;; slice seller_address
-        sale_info_cs~load_msg_addr(), ;; slice buyer_address
-        sale_info_cs~load_uint(32), ;; int approval_points_for_sale
-        sale_info_cs~load_uint(32) ;; int profit_points_for_sale
+        seller_address, ;; slice seller_address
+        buyer_address, ;; slice buyer_address
+        approval_points_for_sale, ;; int approval_points_for_sale
+        profit_points_for_sale ;; int profit_points_for_sale
     );
 }

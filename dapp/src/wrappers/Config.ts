@@ -18,15 +18,23 @@ export const ADaoOperationCodes = {
     AcceptInvitationToADao: 6,
     BuyPoints: 7,
     InviteToADao: 8,
-    ChangeMyAddress: 9,
-    QuitADao: 10,
+    RevokeApproval: 9,
+    ChangeMyAddress: 10,
+    QuitADao: 11,
+    TopUpADaoBalance: 12,
+};
+
+export const ADaoInternalOperations = {
+    CollectFunds: 81,
+    StartPointSale: 82,
+    TransferBoughtPoints: 83,
 };
 
 export const ADaoTransactionTypes = {
     TransactionWithoutType: 0,
     InviteAddress: 1,
     DeleteAddress: 2,
-    WithdrawProfit: 3,
+    SendCollectFunds: 81,
     DistributeTon: 4,
     ArbitraryTransaction: 5,
     UpdateAgreementPercent: 6,
