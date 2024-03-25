@@ -48,22 +48,37 @@ export function serializeADaoConfigToCell(config: ADaoConfig): Cell {
     .endCell();
 }
 
-export type PendingInvitationsValue = {
-    address: Address,
+export type PendingInvitationsData = {
+    authorized_address: Address,
     approval_points: number | bigint,
     profit_points: number | bigint,
 }
 
-export function createPendingInvitationsValue(): DictionaryValue<PendingInvitationsValue> {
+export type PendingTransactionsData = {
+    transaction_type: number | bigint;
+    deadline: number | bigint;
+    transaction_info: Cell;
+    approvals: Cell | null;
+    approval_points_recieved: number | bigint;
+}
+
+export type AuthorizedAddressData = {
+    authorized_address: Address;
+    approval_points: number | bigint;
+    profit_points: number | bigint;
+    approved_transactions: Cell | null;
+}
+
+export function createPendingInvitationsData(): DictionaryValue<PendingInvitationsData> {
     return {
-        serialize(src: PendingInvitationsValue, builder: Builder) {
-            builder.storeAddress(src.address);
+        serialize(src: PendingInvitationsData, builder: Builder) {
+            builder.storeAddress(src.authorized_address);
             builder.storeUint(src.approval_points, 32);
             builder.storeUint(src.profit_points, 32);
         },
         parse: (src: Slice) => {
             return {
-                address: src.loadAddress(),
+                authorized_address: src.loadAddress(),
                 approval_points: src.loadUint(32),
                 profit_points: src.loadUint(32),
             };
@@ -476,6 +491,60 @@ export class ADao implements Contract {
     async getADaoStatus(provider: ContractProvider): Promise<number> {
         const result = await provider.get('get_a_dao_status', []);
         return result.stack.readNumber(); // int1 active?
+    }
+
+    async getPendingInvitationData(provider: ContractProvider, passcode: bigint): Promise<PendingInvitationsData> {
+
+        const result = await provider.get('get_pending_invitation_data', [{ type: 'int', value: passcode }]);
+
+        const authorized_address = result.stack.readAddress();
+        const approval_points = result.stack.readBigNumber();
+        const profit_points = result.stack.readBigNumber();
+
+        return {
+            authorized_address,
+            approval_points,
+            profit_points
+        };
+
+    }
+
+    async getPendingTransactionsData(provider: ContractProvider, key: bigint): Promise<PendingTransactionsData> {
+
+        const result = await provider.get('get_pending_transaction_data', [{ type: 'int', value: key }]);
+
+        const transaction_type = result.stack.readBigNumber();
+        const deadline = result.stack.readBigNumber();
+        const transaction_info = result.stack.readCell();
+        const approvals = result.stack.readCellOpt();
+        const approval_points_recieved = result.stack.readBigNumber();
+
+        return {
+            transaction_type,
+            deadline,
+            transaction_info,
+            approvals,
+            approval_points_recieved
+        };
+
+    }
+
+    async getAuthorizedAddressData(provider: ContractProvider, authorized_address_cell: Cell): Promise<AuthorizedAddressData> {
+
+        const result = await provider.get('get_authorized_address_data', [{ type: 'cell', cell: authorized_address_cell}])
+
+        const authorized_address = result.stack.readAddress();
+        const approval_points = result.stack.readBigNumber();
+        const profit_points = result.stack.readBigNumber();
+        const approved_transactions = result.stack.readCellOpt();
+
+        return {
+            authorized_address,
+            approval_points,
+            profit_points,
+            approved_transactions
+        };
+
     }
 
     async getADaoData(provider: ContractProvider): Promise<ADaoData> {

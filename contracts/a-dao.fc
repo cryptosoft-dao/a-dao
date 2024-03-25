@@ -254,6 +254,7 @@ const int tt::delete_pending_transactions = 10;
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
         throw_unless(error::unauthorized_address, success?);
         ~strdump("Start points parsing");
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
         int approval_points = authorized_address_info_cs~load_uint(32);
         ~strdump("approval_points");
         approval_points~dump();
@@ -271,6 +272,9 @@ const int tt::delete_pending_transactions = 10;
         transaction_type~dump();
         if (transaction_type == tt::put_up_points_for_sale) {
             ~strdump("Check funds suffiency for put_up_points_for_sale");
+            my_balance~dump();
+            total_profit_reserved~dump();
+            points_seller_creation_fee~dump();
             throw_unless(error::unsufficent_balance_to_put_up_points_for_sale, (my_balance - total_profit_reserved) > points_seller_creation_fee);
         }
         int deadline = transaction_cs~load_uint(32); ;; deadline
@@ -432,6 +436,7 @@ const int tt::delete_pending_transactions = 10;
                 (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
                 if (success?) {
                     ~strdump("Parse recipient info");
+                    points_recipient_info_cs~load_msg_addr();
                     int recipient_approval_points = points_recipient_info_cs~load_uint(32);
                     int recipient_profit_points = points_recipient_info_cs~load_uint(32);
                     cell recipient_approved_transactions = points_recipient_info_cs~load_dict();
@@ -447,8 +452,9 @@ const int tt::delete_pending_transactions = 10;
                     ~strdump("Add recipient to authorized_addresses");
                     points_recipient_info_cs = 
                         begin_cell()
-                            .store_uint(32, sender_approval_points)
-                            .store_uint(32, sender_profit_points)
+                            .store_slice(points_recipient)
+                            .store_uint(sender_approval_points, 32)
+                            .store_uint(sender_profit_points, 32)
                             .store_dict(sender_approved_transactions)
                         .end_cell().begin_parse();
                     authorized_addresses~udict_set(256, points_recipient_sha256, points_recipient_info_cs);
@@ -858,12 +864,13 @@ const int tt::delete_pending_transactions = 10;
         ~strdump("Start udict_get?");
         int sender_address_sha256 = slice_hash(sender_address);
         (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
-        ~strdump("End udict_get?");
-        slice authorized_address = authorized_address_info_cs~load_msg_addr();
-        if (success? & equal_slices(sender_address, authorized_address)) {
+        if (success?) {
             ~strdump("Sender authorized");
+            slice old_authorized_address = authorized_address_info_cs~load_msg_addr();
             int approval_points = authorized_address_info_cs~load_uint(32);
+            approval_points~dump();
             int profit_points = authorized_address_info_cs~load_uint(32);
+            profit_points~dump();
             cell active_transaction_approvals = authorized_address_info_cs~load_dict();
             ~strdump("Start authorized_address update");
             slice new_authorized_authorized_address_info = 
@@ -1001,8 +1008,10 @@ const int tt::delete_pending_transactions = 10;
 
 
 
-(slice, int, int, cell) get_authorized_address_data(slice authorized_address) method_id {
+(slice, int, int, cell) get_authorized_address_data(cell authorized_address_cell) method_id {
     load_data();
+    slice authorized_address_cell_cs = authorized_address_cell.begin_parse();
+    slice authorized_address = authorized_address_cell_cs~load_msg_addr();
     int authorized_address_sha256 = slice_hash(authorized_address);
     (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, authorized_address_sha256);
     return (

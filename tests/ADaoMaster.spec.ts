@@ -184,6 +184,18 @@ describe('ADaoMaster', () => {
         const result = profitable_addresses_dict!.beginParse().loadDictDirect(Dictionary.Keys.BigUint(32), Dictionary.Values.Cell());
         expect(result.get(BigInt(0))?.beginParse().loadAddress()).toEqualAddress(profitableAddress.address);
 
+        expect(((await firstADao.getPendingInvitationData(BigInt(0))).authorized_address)).toEqualAddress(wallet0.address);
+        expect((await firstADao.getPendingInvitationData(BigInt(0))).approval_points).toStrictEqual(BigInt(28));
+        expect((await firstADao.getPendingInvitationData(BigInt(0))).profit_points).toStrictEqual(BigInt(37));
+
+        expect(((await firstADao.getPendingInvitationData(BigInt(1))).authorized_address)).toEqualAddress(wallet1.address);
+        expect((await firstADao.getPendingInvitationData(BigInt(1))).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getPendingInvitationData(BigInt(1))).profit_points).toStrictEqual(BigInt(28));
+
+        expect(((await firstADao.getPendingInvitationData(BigInt(2))).authorized_address)).toEqualAddress(wallet2.address);
+        expect((await firstADao.getPendingInvitationData(BigInt(2))).approval_points).toStrictEqual(BigInt(37));
+        expect((await firstADao.getPendingInvitationData(BigInt(2))).profit_points).toStrictEqual(BigInt(35));
+
         // Wallet0 accepts invitation to A DAO
 
         const wallet0AcceptsInvitation = await firstADao.sendAcceptInvitationToADao(wallet0.getSender(), toNano('0.33'), 
@@ -196,6 +208,10 @@ describe('ADaoMaster', () => {
             op: ADaoOperationCodes.AcceptInvitationToADao,
             success: true,
         })
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).authorized_address).toEqualAddress(wallet0.address);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(28));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(37));
 
         printTransactionFees(wallet0AcceptsInvitation.transactions);
 
@@ -214,7 +230,11 @@ describe('ADaoMaster', () => {
             to: firstADao.address,
             op: ADaoOperationCodes.AcceptInvitationToADao,
             success: true,
-        })
+        });
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet1.address).endCell())).authorized_address).toEqualAddress(wallet1.address);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet1.address).endCell())).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet1.address).endCell())).profit_points).toStrictEqual(BigInt(28));
 
         printTransactionFees(wallet1AcceptsInvitation.transactions);
 
@@ -235,7 +255,11 @@ describe('ADaoMaster', () => {
             success: true,
         })
 
-        printTransactionFees(wallet1AcceptsInvitation.transactions);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).authorized_address).toEqualAddress(wallet2.address);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(37));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(35));
+
+        printTransactionFees(wallet2AcceptsInvitation.transactions);
 
         const ADaoDataAfterWallet2In = await firstADao.getADaoData();
         expect(ADaoDataAfterWallet2In.total_approval_points).toStrictEqual(BigInt(100));
@@ -247,18 +271,22 @@ describe('ADaoMaster', () => {
 
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
 
-        const wallet2ChangesAddressToWallet2 = await firstADao.sendChangeMyAddress(wallet2.getSender(), toNano('0.33'), 
+        const wallet2ChangesAddressToWallet3 = await firstADao.sendChangeMyAddress(wallet2.getSender(), toNano('0.33'), 
             wallet3.address, // NewAddress
         )
 
-        expect(wallet2ChangesAddressToWallet2.transactions).toHaveTransaction({
+        expect(wallet2ChangesAddressToWallet3.transactions).toHaveTransaction({
             from: wallet2.address,
             to: firstADao.address,
             op: ADaoOperationCodes.ChangeMyAddress,
             success: true,
         })
 
-        printTransactionFees(wallet2ChangesAddressToWallet2.transactions);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet3.address).endCell())).authorized_address).toEqualAddress(wallet3.address);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet3.address).endCell())).approval_points).toStrictEqual(BigInt(37));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet3.address).endCell())).profit_points).toStrictEqual(BigInt(35));
+
+        printTransactionFees(wallet2ChangesAddressToWallet3.transactions);
 
         const wallet3ChangesAddressToWallet2 = await firstADao.sendChangeMyAddress(wallet3.getSender(), toNano('0.33'), 
             wallet2.address, // NewAddress
@@ -269,7 +297,11 @@ describe('ADaoMaster', () => {
             to: firstADao.address,
             op: ADaoOperationCodes.ChangeMyAddress,
             success: true,
-        })
+        });
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).authorized_address).toEqualAddress(wallet2.address);
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(37));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(35));
 
         printTransactionFees(wallet3ChangesAddressToWallet2.transactions);
 
@@ -289,7 +321,9 @@ describe('ADaoMaster', () => {
             to: firstADao.address,
             op: ADaoOperationCodes.ProposeTransaction,
             success: true,
-        })
+        });
+
+        expect((await firstADao.getPendingTransactionsData(BigInt(0))).transaction_info.beginParse().loadAddress()).toEqualAddress(wallet3.address);
 
         printTransactionFees(proposeWallet3Invitation.transactions);
 
@@ -308,6 +342,8 @@ describe('ADaoMaster', () => {
             op: ADaoOperationCodes.ProposeTransaction,
             success: true,
         })
+
+        expect((await firstADao.getPendingTransactionsData(BigInt(1))).transaction_info.beginParse().loadAddress()).toEqualAddress(wallet1.address);
 
         printTransactionFees(proposeWallet1Delete.transactions);
 
@@ -381,8 +417,6 @@ describe('ADaoMaster', () => {
         expect(ADaoDataAfterWallet2In.total_profit_points).toStrictEqual(BigInt(146));
 
     });
-
-    /*
 
     it('Wallet3 should quit A DAO', async () => {
 
@@ -1165,7 +1199,5 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
 
     });
-
-    */
 
 });
