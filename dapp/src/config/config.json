@@ -272,6 +272,9 @@
           },
           "ProfitPointsForSale": {
             "fieldTitle": ""
+          },
+          "Price": {
+            "fieldTitle": ""
           }
         }
       },
@@ -499,6 +502,15 @@
           }
         },
         "outNames": {}
+      },
+      "getPointsSellerAddressByIndex": {
+        "tabName": "",
+        "params": {
+          "index": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
       }
     },
     "definedTypes": {
@@ -539,7 +551,16 @@
   "PointsSeller": {
     "defaultAddress": "",
     "tabName": "",
-    "sendFunctions": {},
+    "sendFunctions": {
+      "sendBuy": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      }
+    },
     "getFunctions": {},
     "definedTypes": {}
   }

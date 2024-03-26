@@ -125,6 +125,10 @@ const int op::transfer_bought_points = 84;
             .store_ref(
                 begin_cell()
                     .store_uint(op::transfer_bought_points, 32)
+                    .store_slice(seller_address)
+                    .store_slice(buyer_address)
+                    .store_uint(approval_points_for_sale, 32)
+                    .store_uint(profit_points_for_sale, 32)
                 .end_cell()
             )
         .end_cell();

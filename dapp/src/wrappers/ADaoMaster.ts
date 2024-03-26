@@ -75,4 +75,9 @@ export class ADaoMaster implements Contract {
         return result.stack.readAddress();
     }
 
+    async getPointsSellerAddressByIndex(provider: ContractProvider, index: bigint): Promise<Address> {
+        const result = await provider.get('get_points_seller_address_by_index', [{ type: 'int', value: index }]);
+        return result.stack.readAddress();
+    }
+
 }
