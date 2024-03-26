@@ -22,7 +22,7 @@ const int op::top_up_balance = 12;
 
 const int op::collect_funds = 81;
 const int op::start_points_sale = 82;
-const int op::transfer_bought_points = 83;
+const int op::transfer_bought_points = 84;
 
 ;; Transaction Types
 
@@ -972,7 +972,9 @@ const int tt::delete_pending_transactions = 10;
         return();
     }
     if (op == op::transfer_bought_points) {
-        ~strdump("Start A DAO Activation");
+        ~strdump("Start the Transfer Of Bought Points");
+
+        return();
 
     }
     if (op == op::activate_a_dao) {

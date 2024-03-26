@@ -1202,6 +1202,24 @@ describe('ADaoMaster', () => {
         expect(wallet2ApprovesPutUpPointsForSale.transactions).toHaveTransaction({
             from: aDaoMaster.address,
             to: pointsSellerAddress,
+            deploy: true,
+            success: true
+        });
+
+        const pointsSeller = blockchain.openContract(PointsSeller.createFromAddress(pointsSellerAddress));
+
+        const wallet0BuysPointsFromWallet2 = await pointsSeller.sendBuy(wallet0.getSender(), toNano(100));
+
+        expect(wallet0BuysPointsFromWallet2.transactions).toHaveTransaction({
+            from: wallet0.address,
+            to: pointsSeller.address,
+            success: true,
+        })
+
+        expect(wallet0BuysPointsFromWallet2.transactions).toHaveTransaction({
+            from: pointsSeller.address,
+            to: firstADao.address,
+            success: true,
         })
 
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);

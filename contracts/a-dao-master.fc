@@ -9,7 +9,6 @@ const int op::change_a_dao_master_owner = 2;
 ;; Internal operations
 
 const int op::start_points_sale = 82;
-const int op::deploy_points_seller = 83;
 
 ;; Global variables
 
@@ -168,7 +167,7 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
     int op = in_msg_body~load_uint(32);
     if (op == op::start_points_sale) {
         ~strdump("Start initiating points sale");
-        slice a_dao_master = in_msg_body~load_msg_addr();
+        slice a_dao = in_msg_body~load_msg_addr();
         slice seller_address = in_msg_body~load_msg_addr();
         slice buyer_address = in_msg_body~load_msg_addr();
         int approval_points_for_sale = in_msg_body~load_uint(32);
@@ -184,7 +183,8 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
             .store_ref(points_seller_initial_state)
             .store_ref(
                 begin_cell()
-                    .store_uint(op::deploy_points_seller, 32)
+                    .store_uint(op::start_points_sale, 32)
+                    .store_slice(a_dao)
                     .store_slice(seller_address)
                     .store_slice(buyer_address)
                     .store_uint(approval_points_for_sale, 32)
