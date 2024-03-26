@@ -117,6 +117,10 @@ const int op::transfer_bought_points = 84;
         ~strdump("1");
         throw_unless(777, msg_value >= price);
         ~strdump("1");
+        seller_address~dump();
+        buyer_address~dump();
+        approval_points_for_sale~dump();
+        profit_points_for_sale~dump();
         var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(a_dao)
@@ -145,8 +149,11 @@ const int op::transfer_bought_points = 84;
         a_dao = in_msg_body~load_msg_addr();
         seller_address = in_msg_body~load_msg_addr();
         buyer_address = in_msg_body~load_msg_addr();
+        price = in_msg_body~load_coins();
         approval_points_for_sale = in_msg_body~load_uint(32);
+        approval_points_for_sale~dump();
         profit_points_for_sale = in_msg_body~load_uint(32);
+        profit_points_for_sale~dump();
         active? = -1;
         active?~dump();
         save_data();

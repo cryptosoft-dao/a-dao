@@ -537,9 +537,15 @@ const int tt::delete_pending_transactions = 10;
             if (transaction_type == tt::put_up_points_for_sale) {
                 ~strdump("Start Transaction Approval: Put Up Points For Sale");
                 slice seller_address = transaction_info_cs~load_msg_addr();
+                seller_address~dump();
                 slice buyer_address = transaction_info_cs~load_msg_addr();
+                buyer_address~dump();
+                int price = transaction_info_cs~load_coins();
+                price~dump();
                 int approval_points_for_sale = transaction_info_cs~load_uint(32);
+                approval_points_for_sale~dump();
                 int profit_points_for_sale = transaction_info_cs~load_uint(32);
+                profit_points_for_sale~dump();
                 ~strdump("Request master to initiate sale");
                 var msg = 
                     begin_cell()
@@ -553,6 +559,7 @@ const int tt::delete_pending_transactions = 10;
                                 .store_slice(my_address())
                                 .store_slice(seller_address)
                                 .store_slice(buyer_address)
+                                .store_coins(price)
                                 .store_uint(approval_points_for_sale, 32)
                                 .store_uint(profit_points_for_sale, 32)
                             .end_cell()
@@ -799,13 +806,16 @@ const int tt::delete_pending_transactions = 10;
             slice points_buyer = transaction_info_cs~load_msg_addr();
             int price = transaction_info_cs~load_coins();
             int approval_points_for_sale = transaction_info_cs~load_uint(32);
+            approval_points_for_sale~dump();
             int profit_points_for_sale = transaction_info_cs~load_uint(32);
+            profit_points_for_sale~dump();
             ~strdump("Check points availability");
             int approval_points = authorized_address_info_cs~load_uint(32);
             int profit_points = authorized_address_info_cs~load_uint(32);
             throw_unless(error::unsufficent_approval_points, approval_points_for_sale <= approval_points);
             throw_unless(error::unsufficent_profit_points, profit_points_for_sale <= profit_points);
             ~strdump("Add transaction to pending_transactions");
+            next_transaction_index~dump();
             pending_transactions~udict_set_ref(
                 32, 
                 next_transaction_index, 
@@ -975,16 +985,22 @@ const int tt::delete_pending_transactions = 10;
         ~strdump("Start the Transfer Of Bought Points");
         ~strdump("Parse transaction info");
         slice points_sender = in_msg_body~load_msg_addr();
+        points_sender~dump();
         slice points_recipient = in_msg_body~load_msg_addr();
+        points_recipient~dump();
         int approval_points_in_transfer = in_msg_body~load_uint(32);
+        approval_points_in_transfer~dump();
         int profit_points_in_transfer = in_msg_body~load_uint(32);
+        profit_points_in_transfer~dump();
         ~strdump("Get sender points info");
         int points_sender_sha256 = slice_hash(points_sender);
         (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
         throw_unless(error::unauthorized_address, success?);
         slice points_sender_address = points_sender_info_cs~load_msg_addr();
         int sender_approval_points = points_sender_info_cs~load_uint(32);
+        sender_approval_points~dump();
         int sender_profit_points = points_sender_info_cs~load_uint(32);
+        sender_profit_points~dump();
         cell sender_approved_transactions = points_sender_info_cs~load_dict();
         ~strdump("Check recipient in authorized_addresses");
         int points_recipient_sha256 = slice_hash(points_recipient);
@@ -993,16 +1009,28 @@ const int tt::delete_pending_transactions = 10;
             ~strdump("Parse recipient info");
             points_recipient_info_cs~load_msg_addr();
             int recipient_approval_points = points_recipient_info_cs~load_uint(32);
+            recipient_approval_points~dump();
             int recipient_profit_points = points_recipient_info_cs~load_uint(32);
+            recipient_profit_points~dump();
             cell recipient_approved_transactions = points_recipient_info_cs~load_dict();
             ~strdump("Update recipient info");
             recipient_approval_points = recipient_approval_points + approval_points_in_transfer;
+            recipient_approval_points~dump();
             recipient_profit_points = recipient_profit_points + profit_points_in_transfer;
+            recipient_profit_points~dump();
             (int key, slice sender_approved_transaction, int flag) = sender_approved_transactions.udict_get_min?(32);
             while (flag) {
                 recipient_approved_transactions~udict_add?(32, key, sender_approved_transaction);
                 (key, sender_approved_transaction, flag) = sender_approved_transactions.udict_get_next?(32, key);
             }
+            points_recipient_info_cs = 
+                begin_cell()
+                    .store_slice(points_recipient)
+                    .store_uint(recipient_approval_points, 32)
+                    .store_uint(recipient_profit_points, 32)
+                    .store_dict(recipient_approved_transactions)
+                .end_cell().begin_parse();
+            authorized_addresses~udict_set(256, points_recipient_sha256, points_recipient_info_cs);
         } else {
             ~strdump("Add recipient to authorized_addresses");
             points_recipient_info_cs = 

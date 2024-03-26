@@ -27,7 +27,6 @@ export const ADaoOperationCodes = {
 export const ADaoInternalOperations = {
     CollectFunds: 81,
     StartPointSale: 82,
-    TransferBoughtPoints: 83,
 };
 
 export const ADaoTransactionTypes = {
@@ -44,3 +43,7 @@ export const ADaoTransactionTypes = {
     DeletePendingTransactions: 10,
 }
 
+export const PointsSellerOperations = {
+    Buy: 0,
+    TransferBoughtPoints: 84,
+}

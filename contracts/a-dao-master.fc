@@ -170,6 +170,7 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
         slice a_dao = in_msg_body~load_msg_addr();
         slice seller_address = in_msg_body~load_msg_addr();
         slice buyer_address = in_msg_body~load_msg_addr();
+        int price = in_msg_body~load_coins();
         int approval_points_for_sale = in_msg_body~load_uint(32);
         int profit_points_for_sale = in_msg_body~load_uint(32);
         ~strdump("Create deploy message");
@@ -187,6 +188,7 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
                     .store_slice(a_dao)
                     .store_slice(seller_address)
                     .store_slice(buyer_address)
+                    .store_coins(price)
                     .store_uint(approval_points_for_sale, 32)
                     .store_uint(profit_points_for_sale, 32)
                 .end_cell()
