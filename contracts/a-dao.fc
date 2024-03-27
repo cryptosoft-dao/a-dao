@@ -449,6 +449,44 @@ const int tt::delete_pending_transactions = 10;
             }
             if (transaction_type == tt::transfer_points) {
                 ~strdump("Start Transaction Approval: Transfer Points");
+                slice points_sender = transaction_info_cs~load_msg_addr();
+                slice points_recipient = transaction_info_cs~load_msg_addr();
+                int approval_points_in_transfer = transaction_info_cs~load_uint(32);
+                int profit_points_in_transfer = transaction_info_cs~load_uint(32);
+                ~strdump("Get sender points info");
+                int points_sender_sha256 = slice_hash(points_sender);
+                (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
+                throw_unless(error::unauthorized_address, success?);
+                slice points_sender_address = points_sender_info_cs~load_msg_addr();
+                int sender_approval_points = points_sender_info_cs~load_uint(32);
+                int sender_profit_points = points_sender_info_cs~load_uint(32);
+                cell sender_approved_transactions = points_sender_info_cs~load_dict();
+                ~strdump("Step 0: Update recipient");
+                int points_recipient_sha256 = slice_hash(points_recipient);
+                (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
+                if (success?) { ;; Recipient is authorized?
+                ~strdump("Recipient is authorized");
+                    ~strdump("Parse recipient info");
+                    points_recipient_info_cs~load_msg_addr();
+                    int recipient_approval_points = points_recipient_info_cs~load_uint(32);
+                    int recipient_profit_points = points_recipient_info_cs~load_uint(32);
+                    cell recipient_approved_transactions = points_recipient_info_cs~load_dict();
+                    ~strdump("Update recipient total points");
+                    recipient_approval_points = recipient_approval_points + approval_points_in_transfer;
+                    recipient_profit_points = recipient_profit_points + profit_points_in_transfer;
+                    ~strdump("Update recipient approvals");
+                    (int key, slice sender_approved_transaction, int flag) = sender_approved_transactions.udict_get_min?(32);
+                    while (flag) {
+                        recipient_approved_transactions~udict_add?(32, key, sender_approved_transaction);
+                        (key, sender_approved_transaction, flag) = sender_approved_transactions.udict_get_next?(32, key);
+                    }
+                } else {
+                ~strdump("Recipient is not authorized");
+
+                }
+            }
+            if (transaction_type == tt::transfer_points) {
+                ~strdump("Start Transaction Approval: Transfer Points");
                 ~strdump("Parse transaction info");
                 slice points_sender = transaction_info_cs~load_msg_addr();
                 points_sender~dump();
