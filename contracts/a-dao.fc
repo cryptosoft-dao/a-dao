@@ -451,9 +451,13 @@ const int tt::delete_pending_transactions = 10;
                 ~strdump("Start Transaction Approval: Transfer Points");
                 ~strdump("Parse transaction info");
                 slice points_sender = transaction_info_cs~load_msg_addr();
+                points_sender~dump();
                 slice points_recipient = transaction_info_cs~load_msg_addr();
+                points_recipient~dump();
                 int approval_points_in_transfer = transaction_info_cs~load_uint(32);
+                approval_points_in_transfer~dump();
                 int profit_points_in_transfer = transaction_info_cs~load_uint(32);
+                profit_points_in_transfer~dump();
                 ~strdump("Get sender points info");
                 int points_sender_sha256 = slice_hash(points_sender);
                 (slice points_sender_info_cs, int success?) = authorized_addresses.udict_get?(256, points_sender_sha256);
@@ -462,7 +466,7 @@ const int tt::delete_pending_transactions = 10;
                 int sender_approval_points = points_sender_info_cs~load_uint(32);
                 int sender_profit_points = points_sender_info_cs~load_uint(32);
                 cell sender_approved_transactions = points_sender_info_cs~load_dict();
-                ~strdump("Check recipient in authorized_addresses");
+                ~strdump("Step 1: Check recipient in authorized_addresses");
                 int points_recipient_sha256 = slice_hash(points_recipient);
                 (slice points_recipient_info_cs, int success?) = authorized_addresses.udict_get?(256, points_recipient_sha256);
                 if (success?) {
@@ -484,13 +488,13 @@ const int tt::delete_pending_transactions = 10;
                     points_recipient_info_cs = 
                         begin_cell()
                             .store_slice(points_recipient)
-                            .store_uint(sender_approval_points, 32)
-                            .store_uint(sender_profit_points, 32)
+                            .store_uint(approval_points_in_transfer, 32)
+                            .store_uint(profit_points_in_transfer, 32)
                             .store_dict(sender_approved_transactions)
                         .end_cell().begin_parse();
                     authorized_addresses~udict_set(256, points_recipient_sha256, points_recipient_info_cs);
                 }
-                ~strdump("Update sender approves");
+                ~strdump("Step 2: Update Sender Approved Transactions");
                 (int key, slice value, int flag) = sender_approved_transactions.udict_get_min?(32);
                 while (flag) {
                     (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, key);
@@ -524,11 +528,14 @@ const int tt::delete_pending_transactions = 10;
                     pending_transactions~udict_set_ref(32, key, new_transaction_state);
                     (int key, slice value, int flag) = sender_approved_transactions.udict_get_next?(32, key);
                 }
+                ~strdump("Step 3: New State Of Sender in authorized_addresses");
                 if ((sender_approval_points - approval_points_in_transfer == 0) & (sender_profit_points - profit_points_in_transfer == 0)) {
                     ~strdump("Delete sender from authorized_addresses if all points transfered");
                     int sender_address_sha256 = slice_hash(sender_address);
                     (authorized_addresses, int success?) = authorized_addresses.udict_delete?(256, sender_address_sha256);
                     throw_unless(error::unauthorized_address, success?);
+                } else {
+
                 }
                 save_data();
                 just_notify_master(op, transaction_type);
@@ -1044,6 +1051,9 @@ const int tt::delete_pending_transactions = 10;
         }
         ~strdump("Update sender approves");
         (int key, slice value, int flag) = sender_approved_transactions.udict_get_min?(32);
+        key~dump();
+        value~dump();
+        flag~dump();
         while (flag) {
             (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, key);
             throw_unless(error::transaction_not_found, success?);
