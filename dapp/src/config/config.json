@@ -510,7 +510,7 @@
             "fieldTitle": ""
           }
         },
-        "outNames": []
+        "outNames": {}
       }
     },
     "definedTypes": {
