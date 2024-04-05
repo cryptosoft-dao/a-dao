@@ -776,26 +776,24 @@ describe('ADaoMaster', () => {
             success: true,
         })
 
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet5.address).endCell())).approval_points).toStrictEqual(BigInt(12));
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet5.address).endCell())).profit_points).toStrictEqual(BigInt(13));
-
         expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(25));
         expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(22));
+
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet5.address).endCell())).approval_points).toStrictEqual(BigInt(12));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet5.address).endCell())).profit_points).toStrictEqual(BigInt(13));
 
         printTransactionFees(wallet2ApprovesTransferPoints.transactions);
 
     });
 
-    /*
-
-
-    it('Should Propose Transaction: Transfer Points To Authorized Address', async () => {
+    it('Should Propose Transaction: Transfer Points from Wallet2 to Wallet0 (authorized address)', async () => {
 
         const proposeTransferPoints = await firstADao.sendProposeTransferPoints(wallet2.getSender(), toNano('0.33'), 
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
-            wallet2.address, // Recipient
-            BigInt(10), // ApprovalPoints
-            BigInt(10), // ProfitPoints
+            wallet0.address, // Recipient
+            BigInt(7), // ApprovalPoints
+            BigInt(7), // ProfitPoints
         )
 
         expect(proposeTransferPoints.transactions).toHaveTransaction({
@@ -840,6 +838,12 @@ describe('ADaoMaster', () => {
         })
 
         printTransactionFees(wallet2ApprovesTransferPoints.transactions);
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(18));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(15));
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(44));
 
     });
 
@@ -1153,11 +1157,11 @@ describe('ADaoMaster', () => {
 
     it('Should Propose Transaction: Put Up Points For Sale To Authorized Address', async () => {
 
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(37));
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(18));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(15));
 
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(28));
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(37));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(44));
 
         const proposeTransferPoints = await firstADao.sendPutUpPointsForSale(wallet2.getSender(), toNano('0.33'), 
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // Deadline
@@ -1179,6 +1183,12 @@ describe('ADaoMaster', () => {
     });
 
     it('Should Approve Transaction: Put Up Points For Sale', async () => {
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(18));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(15));
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(44));
 
         // Wallet0 approves Put Up Points For Sale
 
@@ -1225,6 +1235,12 @@ describe('ADaoMaster', () => {
             success: true
         });
 
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(18));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(15));
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(35));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(44));
+
         const pointsSeller = blockchain.openContract(PointsSeller.createFromAddress(pointsSellerAddress));
 
         const wallet0BuysPointsFromWallet2 = await pointsSeller.sendBuy(wallet0.getSender(), toNano(100));
@@ -1245,13 +1261,14 @@ describe('ADaoMaster', () => {
         // expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(27));
         // expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(25));
 
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(38));
-        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(47));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).approval_points).toStrictEqual(BigInt(8));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet2.address).endCell())).profit_points).toStrictEqual(BigInt(5));
+
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).approval_points).toStrictEqual(BigInt(45));
+        expect((await firstADao.getAuthorizedAddressData(beginCell().storeAddress(wallet0.address).endCell())).profit_points).toStrictEqual(BigInt(54));
 
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
 
     });
-
-    */
 
 });
