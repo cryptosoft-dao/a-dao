@@ -288,10 +288,8 @@ const int tt::delete_pending_transactions = 10;
         slice authorized_address = authorized_address_info_cs~load_msg_addr();
         int approval_points = authorized_address_info_cs~load_uint(32);
         ~strdump("approval_points");
-        approval_points~dump();
         int profit_points = authorized_address_info_cs~load_uint(32);
-        ~strdump("profit_points");
-        profit_points~dump();
+        cell approved_transactions = authorized_address_info_cs~load_dict();
         ~strdump("Get transaction by transaction_index");
         transaction_index~dump();
         (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
@@ -350,6 +348,18 @@ const int tt::delete_pending_transactions = 10;
                             .end_cell()
                         )
                     .end_cell();
+                ~strdump("Update individual transactions approvals");
+                approved_transactions~udict_set(32, transaction_index, begin_cell().end_cell().begin_parse());
+                ~strdump("New cell");
+                points_recipient_info_cs = 
+                    begin_cell()
+                        .store_slice(authorized_address)
+                        .store_uint(approval_points, 32)
+                        .store_uint(profit_points, 32)
+                        .store_dict(approved_transactions)
+                    .end_cell().begin_parse();
+                ~strdump("Create new state of sender in authorized_addresses");
+                authorized_addresses~udict_set(256, points_sender_sha256, points_recipient_info_cs);
                 send_raw_message(msg, 0);
                 save_data();
                 just_notify_master(op, transaction_type);
@@ -514,7 +524,7 @@ const int tt::delete_pending_transactions = 10;
                             .store_dict(new_dict())
                         .end_cell().begin_parse();
                     ~strdump("err");
-                    authorized_addresses~udict_set(256, points_sender_sha256, points_sender_info_cs);
+                    ~udict_set(256, points_sender_sha256, points_sender_info_cs);
                     ~strdump("err");
                 }
                 ~strdump("Step 2: Update points recipient");
@@ -540,7 +550,7 @@ const int tt::delete_pending_transactions = 10;
                         ~strdump("Update pending transactions");
                         (cell transaction, int success?) = pending_transactions.udict_get_ref?(32, transaction_index);
                         slice transaction_cs = transaction.begin_parse();
-                        int transaction_type = transaction_cs~load_uint(32); ;; transaction_type
+                        int transaction_type = trauthorized_addressesansaction_cs~load_uint(32); ;; transaction_type
                         int deadline = transaction_cs~load_uint(32); ;; deadline
                         cell transaction_info = transaction_cs~load_ref(); ;; transaction_info
                         cell approvals = transaction_cs~load_dict(); ;; approvals
@@ -717,7 +727,7 @@ const int tt::delete_pending_transactions = 10;
                             .store_slice(address_to_invite)
                             .store_uint(approval_points, 32)
                             .store_uint(profit_points, 32)
-                            .store_dict(new_dict()) ;; dict active_transaction_approvals
+                            .store_dict(new_dict()) ;; dict approved_transactions
                         .end_cell()
                     )
                     .store_dict(approvals)
@@ -958,7 +968,21 @@ const int tt::delete_pending_transactions = 10;
         return();
     }
     if (op == op::revoke_approval) {
-
+        ~strdump("Start approval revocation");
+        int sender_address_sha256 = slice_hash(sender_address);
+        (slice authorized_address_info_cs, int success?) = authorized_addresses.udict_get?(256, sender_address_sha256);
+        throw_unless(error::unauthorized_address, success?);
+        ~strdump("Start points parsing");
+        slice authorized_address = authorized_address_info_cs~load_msg_addr();
+        int approval_points = authorized_address_info_cs~load_uint(32);
+        ~strdump("approval_points");
+        approval_points~dump();
+        int profit_points = authorized_address_info_cs~load_uint(32);
+        cell approved_transactions = authorized_address_info_cs~load_dict();
+        ~strdump("profit_points");
+        profit_points~dump();
+        ~strdump("Delete from individual approvals dictionary");
+        ~strdump("Delete from approvals");
     }
     if (op == op::collect_funds) {
         ~strdump("Start profit collecting");
@@ -980,14 +1004,14 @@ const int tt::delete_pending_transactions = 10;
             approval_points~dump();
             int profit_points = authorized_address_info_cs~load_uint(32);
             profit_points~dump();
-            cell active_transaction_approvals = authorized_address_info_cs~load_dict();
+            cell approved_transactions = authorized_address_info_cs~load_dict();
             ~strdump("Start authorized_address update");
             slice new_authorized_authorized_address_info = 
                 begin_cell()
                     .store_slice(new_authorized_address)
                     .store_uint(approval_points, 32)
                     .store_uint(profit_points, 32)
-                    .store_dict(active_transaction_approvals)
+                    .store_dict(approved_transactions)
                 .end_cell().begin_parse();
             authorized_addresses~udict_set(256, slice_hash(new_authorized_address), new_authorized_authorized_address_info);
 
