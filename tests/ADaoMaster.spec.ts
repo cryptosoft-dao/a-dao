@@ -69,7 +69,7 @@ describe('ADaoMaster', () => {
             ),
         );
 
-        const ADaoMasterDeployResult = await aDaoMaster.sendDeploy(deployer.getSender(), toNano('30000'));
+        const ADaoMasterDeployResult = await aDaoMaster.sendDeploy(deployer.getSender(), toNano('22'));
 
         expect(ADaoMasterDeployResult.transactions).toHaveTransaction({
             from: deployer.address,
@@ -79,7 +79,7 @@ describe('ADaoMaster', () => {
         });
 
         const firstADaoAddresss = await aDaoMaster.getADaoAddressByDeployerAddress(deployer.address);
-        
+
         printTransactionFees(ADaoMasterDeployResult.transactions);
 
         expect(ADaoMasterDeployResult.transactions).toHaveTransaction({
@@ -268,8 +268,6 @@ describe('ADaoMaster', () => {
     });
 
     it('Empty test', async () => {});
-
-    /*
 
     it('Change Wallet2 address to Wallet3 address and change back', async () => {
 
@@ -1272,7 +1270,5 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
 
     });
-
-    */
 
 });

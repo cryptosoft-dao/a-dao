@@ -149,7 +149,7 @@ slice calculate_points_seller_address(cell points_seller_initial_state) {
         cell message = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(a_dao_address)
-            .store_coins(100000000)
+            .store_coins(1000000000)
             .store_uint(7, 108)
             .store_ref(a_dao_initial_state)
             .store_ref(
