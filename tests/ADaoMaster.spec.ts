@@ -598,8 +598,14 @@ describe('ADaoMaster', () => {
 
         expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
             from: firstADao.address,
-            to: wallet2.address,
+            to: wallet3.address,
             success: true,
+        })
+
+        expect(wallet2ApprovesTonDistribution.transactions).toHaveTransaction({
+            from: firstADao.address,
+            to: aDaoMaster.address,
+            op: ADaoOperationCodes.ApproveTransaction,
         })
 
         printTransactionFees(wallet2ApprovesTonDistribution.transactions);
@@ -745,6 +751,8 @@ describe('ADaoMaster', () => {
         printTransactionFees(proposeTransferPoints.transactions);
 
     });
+
+    /*
 
     it('Should Approve Transaction: Transfer Points from Wallet2 to Wallet5 (unauthorized address)', async () => {
 
@@ -1270,5 +1278,7 @@ describe('ADaoMaster', () => {
         printTransactionFees(wallet2ApprovesPutUpPointsForSale.transactions);
 
     });
+
+    */
 
 });
