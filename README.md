@@ -2,7 +2,7 @@
 
 ## Operations
 
-0. Activate A DAO\
+0. Activate A DAO
 1. Propose transaction\
 1.1. Invite address\
 1.2. Delete address\
@@ -25,11 +25,11 @@
 2.7. Put up points for sale\
 2.8. Delete pending invitations\
 2.9. Delete pending transactions\
-3. Accept invitation to A DAO\
-4. Revoke approval\
-4. Change my address\
-5. Quit a DAO\
-7. Activate A DAO\
+3. Accept invitation to A DAO
+4. Revoke approval
+4. Change my address
+5. Quit a DAO
+7. Activate A DAO
 
 ## Internal protocol operations
 
